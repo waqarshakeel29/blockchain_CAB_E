@@ -74,8 +74,8 @@ class MapScreenState extends State<MapScreen> {
       body: SlidingUpPanel(
         controller: panelController,
         maxHeight: _isPathCreated
-            ? MediaQuery.of(context).size.height * 0.4
-            : MediaQuery.of(context).size.height * 0.3,
+            ? MediaQuery.of(context).size.height * 0.40
+            : MediaQuery.of(context).size.height * 0.30,
         minHeight: MediaQuery.of(context).size.height * 0.055,
         body: Stack(
           children: [
