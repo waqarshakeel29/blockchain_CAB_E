@@ -1,8 +1,14 @@
 import 'package:cab_e/map_screen.dart';
 import 'package:cab_e/shared/constants.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:cab_e/providers/order_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  GetIt.I.registerSingleton(OrderProvider());
   runApp(MyApp());
 }
 
@@ -167,4 +173,3 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
-

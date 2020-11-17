@@ -1,16 +1,20 @@
 import 'dart:convert';
 
 import 'package:cab_e/payment_screen.dart';
+import 'package:cab_e/providers/order_provider.dart';
 import 'package:cab_e/shared/constants.dart';
 import 'package:cab_e/wallet_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get_it/get_it.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:http/http.dart' as http;
 import 'custom_search.dart';
+import 'order.dart';
 
 class MapScreen extends StatefulWidget {
   @override
@@ -20,6 +24,8 @@ class MapScreen extends StatefulWidget {
 }
 
 class MapScreenState extends State<MapScreen> {
+  final orderProvider = GetIt.I<OrderProvider>();
+
   GoogleMapController mapController;
   final Key _mapKey = UniqueKey();
 
@@ -849,40 +855,75 @@ class MapScreenState extends State<MapScreen> {
                 },
               ),
               RaisedButton(
-                color: AppColor.primaryYellow,
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Text(
-                    "CONFIRM",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColor.primaryDark,
-                        fontSize: 18),
+                  color: AppColor.primaryYellow,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Text(
+                      "CONFIRM",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColor.primaryDark,
+                          fontSize: 18),
+                    ),
                   ),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                  side: BorderSide(color: AppColor.primaryYellow),
-                ),
-                onPressed: () {
-                  // showDialog(
-                  //   context: context,
-                  //   builder: (BuildContext context) => CustomDialog(
-                  //     title: "Success",
-                  //     description:
-                  //         "Ride has been finished! ",
-                  //     buttonText: "Okay",
-                  //   ),
-                  // );
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                    side: BorderSide(color: AppColor.primaryYellow),
+                  ),
+                  onPressed: () async {
+                    // showDialog(
+                    //   context: context,
+                    //   builder: (BuildContext context) => CustomDialog(
+                    //     title: "Success",
+                    //     description:
+                    //         "Ride has been finished! ",
+                    //     buttonText: "Okay",
+                    //   ),
+                    // );
 
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => PaymentScreen(
-                                fare: totalPrice,
-                              )));
-                },
-              ),
+                    int orderNo = 1;
+                    // if (myOrder.docs.length != 0) {
+                    //   orderNo =
+                    //       Order.fromMap(myOrder.docs[0].data()).userOrderNo + 1;
+                    // }
+
+                    Order order = Order();
+                    order.userOrderNo = orderNo;
+                    order.isCatered = false;
+                    order.orderId = Uuid().generateV4();
+                    order.sourceLat = latLngSource.latitude;
+                    order.sourceLng = latLngSource.longitude;
+                    order.destLat = latLngDestination.latitude;
+                    order.destlng = latLngDestination.longitude;
+                    order.destLocationName = dropOff;
+                    order.sourceLocationName = pickUp;
+                    order.instruction = instructionText;
+                    order.creationTime = DateTime.now().millisecondsSinceEpoch;
+                    // order.scheduledTime = selectedDate.millisecondsSinceEpoch;
+                    order.userUid = "abc123";
+                    order.fare = double.parse(totalPrice);
+
+                    order.status = OrderStatus.findingMessenger;
+                    bool isUploaded = await orderProvider.uploadOrderNow(order);
+
+                    if (isUploaded) {
+                      // orderProvider.sendNotification(
+                      //     'notifier', order.orderId);
+
+                      orderProvider.listenOrdeR(
+                          orderProvider.currentOrder.value.orderId);
+
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => PaymentScreen(
+                                    fare: totalPrice,
+                                  )));
+                      // orderProvider.listenOrder(
+                      //     orderProvider.currentOrder.value.orderId,
+                      //     messengerCallback);
+                    }
+                  }),
             ],
           ),
         ],

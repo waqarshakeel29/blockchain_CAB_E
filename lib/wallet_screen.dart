@@ -32,7 +32,7 @@ class WalletScreenState extends State<WalletScreen> {
     // uint in smart contract means BigInt for us
     var bigAmount = BigInt.from(amount);
     // sendCoin transaction
-    var response = await submit("sendCoin", [address, bigAmount]);
+    var response = await submit("sendCoin", [bigAmount]);
     // hash of the transaction
     return response;
   }
@@ -40,7 +40,7 @@ class WalletScreenState extends State<WalletScreen> {
   Future<List<dynamic>> getBalance(String targetAddressHex) async {
     EthereumAddress address = EthereumAddress.fromHex(targetAddressHex);
     // getBalance transaction
-    List<dynamic> result = await query("getBalance", [address]);
+    List<dynamic> result = await query("getBalance", []);
     // returns list of results, in this case a list with only the balance
     return result;
   }

@@ -31,9 +31,8 @@ class PaymentScreenState extends State<PaymentScreen> {
 
   Future<String> sendCoin(String targetAddressHex, BigInt amount) async {
     EthereumAddress address = EthereumAddress.fromHex(targetAddressHex);
-    // uint in smart contract means BigInt for us
-    // sendCoin transaction
-    var response = await submit("sendCoin", [address, amount]);
+
+    var response = await submit("sendCoin", [amount]);
     // hash of the transaction
     return response;
   }
@@ -41,7 +40,7 @@ class PaymentScreenState extends State<PaymentScreen> {
   Future<List<dynamic>> getBalance(String targetAddressHex) async {
     EthereumAddress address = EthereumAddress.fromHex(targetAddressHex);
     // getBalance transaction
-    List<dynamic> result = await query("getBalance", [address]);
+    List<dynamic> result = await query("getBalance", []);
     // returns list of results, in this case a list with only the balance
     return result;
   }

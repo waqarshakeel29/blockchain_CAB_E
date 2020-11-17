@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "179670743079",
+    "firebase_url": "https://blockchain-payment.firebaseio.com",
+    "project_id": "blockchain-payment",
+    "storage_bucket": "blockchain-payment.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:179670743079:android:7f8674454b0ab4f139f602",
+        "android_client_info": {
+          "package_name": "com.example.cab_e"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "179670743079-3rqdjjitdgtoiun9d83n2eurpshgk4v3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cab_e",
+            "certificate_hash": "5e8928998b853c25e69b557983217cad27be5e1a"
+          }
+        },
+        {
+          "client_id": "179670743079-93in28n59hjadesik8f4ne2hu2bg28v9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9ij9d3PeHqq4KFgjt2nESR6M31Lt8Ing"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "179670743079-93in28n59hjadesik8f4ne2hu2bg28v9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
