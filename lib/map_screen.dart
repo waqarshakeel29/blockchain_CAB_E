@@ -903,7 +903,7 @@ class MapScreenState extends State<MapScreen> {
                     order.userUid = "abc123";
                     order.fare = double.parse(totalPrice);
 
-                    order.status = OrderStatus.findingMessenger;
+                    order.status = OrderStatus.findingDriver;
                     bool isUploaded = await orderProvider.uploadOrderNow(order);
 
                     if (isUploaded) {

@@ -1,13 +1,12 @@
 import 'dart:convert';
 
-
 enum OrderStatus {
   notStarted, // scheduled but there is some time left
-  findingMessenger, // scheduled time has come, now finding a messenger
-  findingMessengerFailed, // finding failed
-  messengerOnWay, // finding success, messenger on the way
-  messengerReachedSource,
-  messengerReachedDestination,
+  findingDriver, // scheduled time has come, now finding a messenger
+  findingDriverFailed, // finding failed
+  driverOnWay, // finding success, messenger on the way
+  driverReachedSource,
+  driverReachedDestination,
   orderCompleted,
   orderCancelled,
 }
@@ -20,9 +19,9 @@ class Order {
   OrderStatus status;
   String userUid;
 
-  String messengerId;
-  double messengerLat;
-  double messengerLng;
+  String driverId;
+  double driverLat;
+  double driverLng;
 
   double rating;
   String instruction;
@@ -45,9 +44,9 @@ class Order {
     this.messageDocId,
     this.isNow,
     this.userUid,
-    this.messengerId,
-    this.messengerLat,
-    this.messengerLng,
+    this.driverId,
+    this.driverLat,
+    this.driverLng,
     this.rating,
     this.instruction,
     this.ratingComment,
@@ -72,9 +71,9 @@ class Order {
       'messageDocId': messageDocId,
       'isNow': isNow,
       'userUid': userUid,
-      'messengerId': messengerId,
-      'messengerLat': messengerLat,
-      'messengerLng': messengerLng,
+      'driverId': driverId,
+      'driverLat': driverLat,
+      'driverLng': driverLng,
       'rating': rating,
       'instruction': instruction,
       'ratingComment': ratingComment,
@@ -102,9 +101,9 @@ class Order {
       isNow: map['isNow'],
       status: OrderStatus.values[map['orderStatus']],
       userUid: map['userUid'],
-      messengerId: map['messengerId'],
-      messengerLat: map['messengerLat'],
-      messengerLng: map['messengerLng'],
+      driverId: map['driverId'],
+      driverLat: map['driverLat'],
+      driverLng: map['driverLng'],
       rating: map['rating'],
       instruction: map['instruction'],
       ratingComment: map['ratingComment'],
@@ -128,7 +127,6 @@ class Order {
 
   @override
   String toString() {
-    return 'Order(userOrderNo: $userOrderNo, orderId: $orderId, messageDocId: $messageDocId, isNow: $isNow, userUid: $userUid, messengerId: $messengerId, messengerLat: $messengerLat, messengerLng: $messengerLng, rating: $rating, instruction: $instruction, ratingComment: $ratingComment, sourceLat: $sourceLat, sourceLng: $sourceLng, sourceLocationName: $sourceLocationName, destLat: $destLat, destlng: $destlng, destLocationName: $destLocationName, creationTime: $creationTime, scheduledTime: $scheduledTime, completedTime: $completedTime, fare: $fare, isCatered: $isCatered)';
+    return 'Order(userOrderNo: $userOrderNo, orderId: $orderId, messageDocId: $messageDocId, isNow: $isNow, userUid: $userUid, driverId: $driverId, driverLat: $driverLat, driverLng: $driverLng, rating: $rating, instruction: $instruction, ratingComment: $ratingComment, sourceLat: $sourceLat, sourceLng: $sourceLng, sourceLocationName: $sourceLocationName, destLat: $destLat, destlng: $destlng, destLocationName: $destLocationName, creationTime: $creationTime, scheduledTime: $scheduledTime, completedTime: $completedTime, fare: $fare, isCatered: $isCatered)';
   }
-
 }

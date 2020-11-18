@@ -38,7 +38,7 @@ class OrderProvider {
     orderListener = col.snapshots().listen((event) {
       if (event.exists) {
         currentOrder = ValueNotifier(Order.fromMap(event.data()));
-        if (currentOrder.value.messengerLat != null) {
+        if (currentOrder.value.driverLat != null) {
           print("LISTEN ------- " +
               currentOrder.value.status.index.toString() +
               " ---- " +
@@ -72,7 +72,7 @@ class OrderProvider {
     orderListener = col.snapshots().listen((event) {
       if (event.exists) {
         currentOrder = ValueNotifier(Order.fromMap(event.data()));
-        if (currentOrder.value.messengerLat != null) {
+        if (currentOrder.value.driverLat != null) {
           print("LISTEN ------- " +
               currentOrder.value.status.index.toString() +
               " ---- " +
