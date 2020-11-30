@@ -1,4 +1,6 @@
 import 'package:cab_e/map_screen.dart';
+import 'package:cab_e/providers/network_provider.dart';
+import 'package:cab_e/scanQR_screen.dart';
 import 'package:cab_e/shared/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
@@ -9,13 +11,24 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   GetIt.I.registerSingleton(OrderProvider());
+  GetIt.I.registerSingleton(NetworkProvider());
   runApp(MyApp());
 }
 
+// void main() {
+//   runApp(MaterialApp(home: MyScan()));
+// }
+
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
+
+  final networkProvider = GetIt.I<NetworkProvider>();
+
   @override
   Widget build(BuildContext context) {
+    // init network provider
+    networkProvider.init();
+
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(

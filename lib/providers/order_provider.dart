@@ -42,7 +42,7 @@ class OrderProvider {
           print("LISTEN ------- " +
               currentOrder.value.status.index.toString() +
               " ---- " +
-              currentOrder.value.isCatered.toString());
+              currentOrder.value.driverId);
           currentOrder.notifyListeners();
           _onTap();
         }
@@ -67,36 +67,4 @@ class OrderProvider {
     //     });
   }
 
-  void listenOrdeR(String orderId) {
-    var col = FirebaseFirestore.instance.collection("order").doc(orderId);
-    orderListener = col.snapshots().listen((event) {
-      if (event.exists) {
-        currentOrder = ValueNotifier(Order.fromMap(event.data()));
-        if (currentOrder.value.driverLat != null) {
-          print("LISTEN ------- " +
-              currentOrder.value.status.index.toString() +
-              " ---- " +
-              currentOrder.value.isCatered.toString());
-          currentOrder.notifyListeners();
-        }
-      }
-    });
-
-    // FirebaseFirestore.instance
-    //     .collection("order")
-    //     .doc(orderId)
-    //     .snapshots()
-    //     .listen((event) {
-    //       if(event.exists) {
-    //           currentOrder = ValueNotifier(Order.fromMap(event.data()));
-    //           if(currentOrder.value.status != OrderStatus.orderCompleted) {
-    //           if (currentOrder.value.messengerLat != null) {
-    //             print("LISTEN ------- " + currentOrder.value.toString());
-    //             currentOrder.notifyListeners();
-    //             _onTap();
-    //           }
-    //         }
-    //       }
-    //     });
-  }
 }

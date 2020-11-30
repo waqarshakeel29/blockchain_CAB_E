@@ -15,6 +15,7 @@ import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:http/http.dart' as http;
 import 'custom_search.dart';
 import 'order.dart';
+import 'scanQR_screen.dart';
 
 class MapScreen extends StatefulWidget {
   @override
@@ -136,7 +137,43 @@ class MapScreenState extends State<MapScreen> {
             ),
           ),
         ),
-        panel: _isPathCreated ? confirmRide() : orderRide(),
+        panel: (() {
+          print("YES_2 ------------------------ ");
+          if (orderProvider.currentOrder.value != null) {
+            if (orderProvider.currentOrder.value.driverId != null &&
+                orderProvider.currentOrder.value.driverId != "" &&
+                orderProvider.currentOrder.value.isCatered == false) {
+              FirebaseFirestore.instance
+                  .collection("order")
+                  .doc(orderProvider.currentOrder.value.orderId)
+                  .update({
+                "orderStatus": OrderStatus.orderCompleted.index,
+                "isCatered": true
+              }).then((_) {
+                print("success-Completed!");
+              });
+
+              print("YES_1 ------------------------ ");
+              setState(() {
+                orderProvider.orderListener.cancel();
+                Future.delayed(
+                    Duration(milliseconds: 1000),
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => MyScan(
+                                  
+                                ))));
+              });
+            }
+          }
+
+          if (_isPathCreated) {
+            return confirmRide();
+          } else {
+            return orderRide();
+          }
+        }()),
         color: AppColor.primaryDark,
         margin: EdgeInsets.only(right: 30, left: 30),
       ),
@@ -900,7 +937,7 @@ class MapScreenState extends State<MapScreen> {
                     order.instruction = instructionText;
                     order.creationTime = DateTime.now().millisecondsSinceEpoch;
                     // order.scheduledTime = selectedDate.millisecondsSinceEpoch;
-                    order.userUid = "abc123";
+                    order.userUid = "1";
                     order.fare = double.parse(totalPrice);
 
                     order.status = OrderStatus.findingDriver;
@@ -910,18 +947,16 @@ class MapScreenState extends State<MapScreen> {
                       // orderProvider.sendNotification(
                       //     'notifier', order.orderId);
 
-                      orderProvider.listenOrdeR(
-                          orderProvider.currentOrder.value.orderId);
+                      // Navigator.push(
+                      //     context,
+                      //     MaterialPageRoute(
+                      //         builder: (context) => PaymentScreen(
+                      //               fare: totalPrice,
+                      //             )));
 
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => PaymentScreen(
-                                    fare: totalPrice,
-                                  )));
-                      // orderProvider.listenOrder(
-                      //     orderProvider.currentOrder.value.orderId,
-                      //     messengerCallback);
+                      orderProvider.listenOrder(
+                          orderProvider.currentOrder.value.orderId,
+                          messengerCallback);
                     }
                   }),
             ],
@@ -930,8 +965,11 @@ class MapScreenState extends State<MapScreen> {
       ),
     );
   }
-}
 
+  void messengerCallback() {
+    setState(() {});
+  }
+}
 // class CustomDialog extends StatelessWidget {
 //   final String title, description, buttonText;
 //   final Image image;
