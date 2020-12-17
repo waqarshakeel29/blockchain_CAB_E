@@ -1,5 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:android_intent/android_intent.dart';
+import 'package:flutter/services.dart' show SystemChrome, rootBundle;
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:cab_e/payment_screen.dart';
 import 'package:cab_e/providers/order_provider.dart';
 import 'package:cab_e/shared/constants.dart';
@@ -8,9 +14,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get_it/get_it.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:http/http.dart' as http;
 import 'custom_search.dart';
@@ -46,10 +55,108 @@ class MapScreenState extends State<MapScreen> {
 
   final Set<Marker> _markers = {};
 
+  Uint8List driverIconUint;
+
   PanelController panelController = PanelController();
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
+
+    FirebaseFirestore.instance
+        .collection("order")
+        .where('userUid', isEqualTo: "1") //provider.appUser.uid)
+        .where('isCatered', isEqualTo: false)
+        .get()
+        .then((value) async {
+      if (value.size != 0) {
+        orderProvider.currentOrder.value = Order.fromMap(value.docs[0].data());
+        setPathRouteInfo(orderProvider.currentOrder.value);
+        orderProvider.currentOrder.notifyListeners();
+        // SharedPreferences prefs = await SharedPreferences.getInstance();
+        // var time = prefs.getInt('counter');
+        // var difference = DateTime.now().millisecondsSinceEpoch - time;
+        // difference = (difference / 1000).floor();
+        // if (difference >= 120) {
+        // difference = 0;
+        // }
+        // findMessenger(difference);
+        orderProvider.listenOrder(
+            orderProvider.currentOrder.value.orderId, messengerCallback);
+      } else {
+        // _getCurrentAtStart();
+      }
+    });
+  }
+
+  void setPathRouteInfo(Order order) {
+    totalDistance = "24";
+    totalTime = "24";
+
+    totalPrice = order.fare.toString();
+    pickUp = order.sourceLocationName;
+    dropOff = order.destLocationName;
+    instructionText = order.instruction;
+    // instructionController.text = order.instruction;
+    latLngSource = LatLng(order.sourceLat, order.sourceLng);
+    latLngDestination = LatLng(order.destLat, order.destlng);
+  }
+
+  // _getCurrentAtStart() {
+  //   _gpsService("Enable GPS",
+  //       'This app will require GPS services, please enable it first');
+  //   final Geolocator geolocator = Geolocator()..forceAndroidLocationManager;
+  //   geolocator
+  //       .getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
+  //       .then((Position position) {
+  //     setState(() {
+  //       _currentPosition = position;
+  //       mapController
+  //           .animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+  //         target: LatLng(
+  //             _currentPosition.latitude - 0.001, _currentPosition.longitude),
+  //         zoom: 17,
+  //       )));
+  //       _onAddMarkerButtonPressed();
+  //     });
+  //   }).catchError((e) {
+  //     print(e);
+  //   });
+  // }
+
+  /*Check if gps service is enabled or not*/
+  Future _gpsService(String title, String note) async {
+    if (!(await Geolocator().isLocationServiceEnabled())) {
+      _checkGps(title, note);
+      return null;
+    } else
+      return true;
+  }
+
+  ////GPS
+  Future _checkGps(String title, String note) async {
+    if (!(await Geolocator().isLocationServiceEnabled())) {
+      if (Theme.of(context).platform == TargetPlatform.android) {
+        showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text(title),
+                content: Text(note),
+                actions: <Widget>[
+                  FlatButton(
+                      child: Text('Ok'),
+                      onPressed: () {
+                        final AndroidIntent intent = AndroidIntent(
+                            action:
+                                'android.settings.LOCATION_SOURCE_SETTINGS');
+                        intent.launch();
+                        Navigator.of(context, rootNavigator: true).pop();
+                      })
+                ],
+              );
+            });
+      }
+    }
   }
 
   BoxDecoration _boxDecoration = BoxDecoration(
@@ -62,6 +169,26 @@ class MapScreenState extends State<MapScreen> {
       bottomRight: Radius.circular(20.0),
     ),
   );
+
+  @override
+  void initState() {
+    super.initState();
+    driverIconAssigned();
+  }
+
+  void driverIconAssigned() async {
+    driverIconUint = await getBytesFromAsset('assets/images/places.png', 100);
+  }
+
+  Future<Uint8List> getBytesFromAsset(String path, int width) async {
+    ByteData data = await rootBundle.load(path);
+    ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(),
+        targetWidth: width);
+    ui.FrameInfo fi = await codec.getNextFrame();
+    return (await fi.image.toByteData(format: ui.ImageByteFormat.png))
+        .buffer
+        .asUint8List();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,104 +205,223 @@ class MapScreenState extends State<MapScreen> {
         elevation: 0.0,
       ),
       backgroundColor: Colors.transparent,
-      body: SlidingUpPanel(
-        controller: panelController,
-        maxHeight: _isPathCreated
-            ? MediaQuery.of(context).size.height * 0.40
-            : MediaQuery.of(context).size.height * 0.30,
-        minHeight: MediaQuery.of(context).size.height * 0.055,
-        body: Stack(
-          children: [
-            GoogleMap(
-              myLocationEnabled: false,
-              mapType: MapType.terrain,
-              polylines: Set<Polyline>.of(polylines.values),
-              key: _mapKey,
-              zoomControlsEnabled: false,
-              markers: _markers,
-              compassEnabled: true,
-              onMapCreated: _onMapCreated,
-              initialCameraPosition: CameraPosition(
-                target: LatLng(30.3753, 69.3451),
-                bearing: 90,
-                tilt: 30,
-                zoom: 5.0,
-              ),
-            )
-          ],
-        ),
-        collapsed: GestureDetector(
-          onTap: () {
-            setState(() {
-              if (panelController.isPanelClosed) {
-                panelController.open();
-              } else {
-                panelController.close();
-              }
-            });
-          },
-          child: Container(
-            color: AppColor.primaryDark,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 15, right: 15),
-              child: Row(
-                children: [
-                  Text(
-                    "Order a Ride",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 25),
+      body: Stack(
+        children: [
+          SlidingUpPanel(
+            controller: panelController,
+            maxHeight: _isPathCreated
+                ? MediaQuery.of(context).size.height * 0.40
+                : MediaQuery.of(context).size.height * 0.30,
+            minHeight: MediaQuery.of(context).size.height * 0.055,
+            body: Stack(
+              children: [
+                GoogleMap(
+                  myLocationEnabled: false,
+                  mapType: MapType.terrain,
+                  polylines: Set<Polyline>.of(polylines.values),
+                  key: _mapKey,
+                  zoomControlsEnabled: false,
+                  markers: _markers,
+                  compassEnabled: true,
+                  onMapCreated: _onMapCreated,
+                  initialCameraPosition: CameraPosition(
+                    target: LatLng(30.3753, 69.3451),
+                    bearing: 90,
+                    tilt: 30,
+                    zoom: 5.0,
                   ),
-                  Expanded(child: SizedBox()),
-                  Icon(
-                    Icons.arrow_upward,
-                    color: Colors.white,
-                  )
-                ],
+                )
+              ],
+            ),
+            collapsed: GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (panelController.isPanelClosed) {
+                    panelController.open();
+                  } else {
+                    panelController.close();
+                  }
+                });
+              },
+              child: Container(
+                color: AppColor.primaryDark,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 15, right: 15),
+                  child: Row(
+                    children: [
+                      Text(
+                        "Order a Ride",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 25),
+                      ),
+                      Expanded(child: SizedBox()),
+                      Icon(
+                        Icons.arrow_upward,
+                        color: Colors.white,
+                      )
+                    ],
+                  ),
+                ),
               ),
             ),
+            panel: (() {
+              print("YES_2 ------------------------ ");
+              if (orderProvider.currentOrder.value == null) {
+                if (_isPathCreated) {
+                  return confirmRide();
+                } else {
+                  return orderRide();
+                }
+                // if (orderProvider.currentOrder.value.driverId != null &&
+                //     orderProvider.currentOrder.value.driverId != "" &&
+                //     orderProvider.currentOrder.value.isCatered == false) {
+                //   FirebaseFirestore.instance
+                //       .collection("order")
+                //       .doc(orderProvider.currentOrder.value.orderId)
+                //       .update({
+                //     "orderStatus": OrderStatus.orderCompleted.index,
+                //     "isCatered": true
+                //   }).then((_) {
+                //     print("success-Completed!");
+                //   });
+
+                //   print("YES_1 ------------------------ ");
+                //   setState(() {
+                //     orderProvider.orderListener.cancel();
+                //     Future.delayed(
+                //         Duration(milliseconds: 1000),
+                //         () => Navigator.push(
+                //             context,
+                //             MaterialPageRoute(
+                //                 builder: (context) => MyScan(
+
+                //                     ))));
+                //   });
+                // }
+                return orderRide();
+              } else if (orderProvider.currentOrder.value.status ==
+                  OrderStatus.findingDriver) {
+                return confirmRide();
+              } else if (orderProvider.currentOrder.value.status ==
+                  OrderStatus.findingDriverFailed) {
+                setState(() {
+                  orderProvider.orderListener.cancel();
+                  orderProvider.isFindingOrder.value = false;
+                  panelController.close();
+                  FirebaseFirestore.instance
+                      .collection("order")
+                      .doc(orderProvider.currentOrder.value.orderId)
+                      .update({
+                    "orderStatus": OrderStatus.findingDriverFailed.index,
+                    "isCatered": true
+                  }).then((_) {
+                    panelController.open();
+                    print("success-Failed!");
+                  });
+                  orderProvider.currentOrder.value = null;
+                  return orderRide();
+                });
+              } else if (orderProvider.currentOrder.value.status ==
+                  OrderStatus.driverOnWay) {
+                setState(() {
+                  orderProvider.isFindingOrder.value = false;
+                  updateMessengerMarker(
+                      LatLng(orderProvider.currentOrder.value.driverLat,
+                          orderProvider.currentOrder.value.driverLng),
+                      "driver");
+                });
+                return onTheWayRide();
+              } else if (orderProvider.currentOrder.value.status ==
+                  OrderStatus.orderCancelled) {
+                Fluttertoast.showToast(
+                    msg: "Order Cancelled",
+                    backgroundColor: Colors.white,
+                    textColor: Colors.black,
+                    toastLength: Toast.LENGTH_LONG);
+                setState(() {
+                  instructionText = "";
+                  // instructionController.text = "";
+                  orderProvider.orderListener.cancel();
+                  orderProvider.isFindingOrder.value = false;
+                  // _showMaps = true;
+                  panelController.close();
+                  FirebaseFirestore.instance
+                      .collection("order")
+                      .doc(orderProvider.currentOrder.value.orderId)
+                      .update({
+                    "orderStatus": OrderStatus.orderCancelled.index,
+                    "isCatered": true
+                  }).then((_) {
+                    panelController.open();
+                    print("success-Cancelled!");
+                  });
+                  _markers.clear();
+                  // orderProvider.currentOrder.value = null;
+                });
+                onOrderCancelled();
+                pickUp = "";
+                dropOff = "";
+                // dateTime = "Date/Time";
+                _getCurrentLocation();
+                return orderRide();
+              } else if (orderProvider.currentOrder.value.status ==
+                  OrderStatus.orderCompleted) {
+                Order tempOrder = null;
+                Fluttertoast.showToast(
+                    msg: "Order Completed",
+                    backgroundColor: Colors.white,
+                    textColor: Colors.black,
+                    toastLength: Toast.LENGTH_LONG);
+                setState(() {
+                  // instructionText = "";
+                  // instructionController.text = "";
+                  orderProvider.orderListener.cancel();
+                  orderProvider.isFindingOrder.value = false;
+                  // _showMaps = true;
+                  panelController.close();
+                  FirebaseFirestore.instance
+                      .collection("order")
+                      .doc(orderProvider.currentOrder.value.orderId)
+                      .update({
+                    "orderStatus": OrderStatus.orderCompleted.index,
+                    "isCatered": true
+                  }).then((_) {
+                    panelController.open();
+                    print("success-Completed!");
+                  });
+                  _markers.clear();
+                  tempOrder = orderProvider.currentOrder.value;
+                  orderProvider.currentOrder.value = null;
+                });
+                onOrderCancelled();
+                pickUp = "";
+                dropOff = "";
+                // dateTime = "Date/Time";
+                _getCurrentLocation();
+                // Future.delayed(
+                //     Duration(milliseconds: 1000),
+                //         () => Navigator.of(context).push(createRoute(OrderCompletePage(order: tempOrder)))
+                // );
+                return orderRide();
+              }
+            }()),
+            color: AppColor.primaryDark,
+            margin: EdgeInsets.only(right: 30, left: 30),
           ),
-        ),
-        panel: (() {
-          print("YES_2 ------------------------ ");
-          if (orderProvider.currentOrder.value != null) {
-            if (orderProvider.currentOrder.value.driverId != null &&
-                orderProvider.currentOrder.value.driverId != "" &&
-                orderProvider.currentOrder.value.isCatered == false) {
-              FirebaseFirestore.instance
-                  .collection("order")
-                  .doc(orderProvider.currentOrder.value.orderId)
-                  .update({
-                "orderStatus": OrderStatus.orderCompleted.index,
-                "isCatered": true
-              }).then((_) {
-                print("success-Completed!");
-              });
-
-              print("YES_1 ------------------------ ");
-              setState(() {
-                orderProvider.orderListener.cancel();
-                Future.delayed(
-                    Duration(milliseconds: 1000),
-                    () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => MyScan(
-                                  
-                                ))));
-              });
-            }
-          }
-
-          if (_isPathCreated) {
-            return confirmRide();
-          } else {
-            return orderRide();
-          }
-        }()),
-        color: AppColor.primaryDark,
-        margin: EdgeInsets.only(right: 30, left: 30),
+          orderProvider.isFindingOrder.value == true
+              ? Container(
+                  width: double.maxFinite,
+                  height: double.maxFinite,
+                  color: Colors.black.withOpacity(0.5),
+                  child: SpinKitRipple(
+                    color: AppColor.primaryDark,
+                    size: double.maxFinite,
+                  ),
+                )
+              : Container(),
+        ],
       ),
       drawer: Drawer(
         child: Container(
@@ -941,6 +1187,7 @@ class MapScreenState extends State<MapScreen> {
                     order.fare = double.parse(totalPrice);
 
                     order.status = OrderStatus.findingDriver;
+
                     bool isUploaded = await orderProvider.uploadOrderNow(order);
 
                     if (isUploaded) {
@@ -957,6 +1204,7 @@ class MapScreenState extends State<MapScreen> {
                       orderProvider.listenOrder(
                           orderProvider.currentOrder.value.orderId,
                           messengerCallback);
+                      findMessenger(120);
                     }
                   }),
             ],
@@ -966,102 +1214,328 @@ class MapScreenState extends State<MapScreen> {
     );
   }
 
-  void messengerCallback() {
+  Widget onTheWayRide() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Container(
+                  alignment: Alignment.center,
+                  width: 70,
+                  height: 70,
+                  child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(children: <TextSpan>[
+                        TextSpan(
+                            text: totalDistance + "\n",
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColor.primaryDark)),
+                        TextSpan(
+                            text: "KM",
+                            style: TextStyle(
+                                fontSize: 13, color: AppColor.primaryDark)),
+                      ])),
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle, color: Colors.white),
+                ),
+                Container(
+                  alignment: Alignment.center,
+                  width: MediaQuery.of(context).size.width * 0.2,
+                  height: 100,
+                  child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(children: <TextSpan>[
+                        TextSpan(
+                            text: totalPrice + "\n",
+                            style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColor.primaryDark)),
+                        TextSpan(
+                            text: "Rs",
+                            style: TextStyle(
+                                fontSize: 15, color: AppColor.primaryDark)),
+                      ])),
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle, color: Colors.white),
+                ),
+                Container(
+                  alignment: Alignment.center,
+                  width: 70,
+                  height: 70,
+                  child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(children: <TextSpan>[
+                        TextSpan(
+                            text: totalTime + "\n",
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColor.primaryDark)),
+                        TextSpan(
+                            text: totalTimeMin ? "Min" : "Hrs",
+                            style: TextStyle(
+                                fontSize: 15, color: AppColor.primaryDark)),
+                      ])),
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.home,
+                color: AppColor.primaryYellow,
+              ),
+              SizedBox(
+                width: 5,
+              ),
+              Container(
+                // decoration: _boxDecoration,
+                width: MediaQuery.of(context).size.width * 0.6,
+                height: 30,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 5),
+                  child: Row(
+                    children: <Widget>[
+                      Flexible(
+                          child: Text(
+                        pickUp,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15,
+                            color: AppColor.primaryYellow.withOpacity(0.9)),
+                      )),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.home,
+                color: AppColor.primaryYellow,
+              ),
+              SizedBox(
+                width: 5,
+              ),
+              Container(
+                // decoration: _boxDecoration,
+                width: MediaQuery.of(context).size.width * 0.6,
+                height: 30,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 5),
+                  child: Row(
+                    children: <Widget>[
+                      Flexible(
+                          child: Text(
+                        dropOff,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15,
+                            color: AppColor.primaryYellow.withOpacity(0.9)),
+                      )),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Divider(color: Colors.white),
+        ],
+      ),
+    );
+  }
+
+  void findMessenger(int findingDurationSec) async {
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
+    // SharedPreferences = SharedPreferences.getInstance();
+    if (orderProvider.currentOrder.value.status == OrderStatus.findingDriver) {
+      // await prefs.setInt('counter', DateTime.now().millisecondsSinceEpoch);
+      setState(() {
+        print("CLOSEEEEEEEE ---------- ");
+        panelController.close();
+        orderProvider.isFindingOrder.value = true;
+        print("TRUEEEEEE - ---- - - -" +
+            orderProvider.isFindingOrder.value.toString());
+      });
+      Timer(Duration(seconds: findingDurationSec), () {
+        if (orderProvider.currentOrder.value.status ==
+            OrderStatus.findingDriver) {
+          setState(() {
+            orderProvider.isFindingOrder.value = false;
+            // isDistanceCal = true;
+            FirebaseFirestore.instance
+                .collection("order")
+                .doc(orderProvider.currentOrder.value.orderId)
+                .update({
+              "orderStatus": OrderStatus.findingDriverFailed.index,
+              "isCatered": true
+            }).then((_) {
+              print("success-Failed-in-Timer!");
+              setState(() {
+                orderProvider.currentOrder.value = null;
+                // isDistanceCal = true;
+              });
+            });
+            AwesomeDialog(
+                context: context,
+                body: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      "No Driver Found",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                          color: AppColor.primaryDark),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 15, right: 15),
+                      child: Text(
+                        "It seems like no driver is available right now.",
+                        style: TextStyle(
+                            fontSize: 18, color: Colors.black.withOpacity(0.6)),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+                onDissmissCallback: () {
+                  panelController.open();
+                },
+                customHeader: Container(
+                  width: double.maxFinite,
+                  height: double.maxFinite,
+                  child: Icon(
+                    Icons.warning,
+                    size: 50,
+                    color: Colors.white,
+                  ),
+                  decoration: BoxDecoration(
+                      color: AppColor.primaryDark, shape: BoxShape.circle),
+                ),
+                animType: AnimType.BOTTOMSLIDE,
+                btnOkColor: AppColor.primaryDark,
+                btnOkOnPress: () async {})
+              ..show();
+          });
+        }
+      });
+    }
+  }
+
+  void addMessengerMarker(LatLng latLng, String id) {
+    try {
+      _markers.remove(_markers
+          .firstWhere((Marker marker) => marker.markerId.value == "driver"));
+    } catch (e) {
+      print(e);
+    }
+
+    _markers.add(Marker(
+      draggable: false,
+      // This marker id can be anything that uniquely identifies each marker.
+      markerId: MarkerId(id),
+      position: latLng,
+      // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+      // icon: messengerIcon,
+      icon: BitmapDescriptor.fromBytes(driverIconUint),
+    ));
+    mapController.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+      target: LatLng(latLng.latitude - 0.008, latLng.longitude),
+      zoom: 15,
+    )));
     setState(() {});
   }
+
+  void messengerCallback() {
+    try {
+      addMessengerMarker(
+          LatLng(orderProvider.currentOrder.value.driverLat,
+              orderProvider.currentOrder.value.driverLng),
+          "driver");
+      _markers.add(Marker(
+        draggable: false,
+        // This marker id can be anything that uniquely identifies each marker.
+        markerId: MarkerId("start"),
+        position: LatLng(orderProvider.currentOrder.value.sourceLat,
+            orderProvider.currentOrder.value.sourceLng),
+        // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+        // icon: sourceIcon,
+        // icon: BitmapDescriptor.fromBytes(sourceIconUint),
+      ));
+      _markers.add(Marker(
+          draggable: false,
+          // This marker id can be anything that uniquely identifies each marker.
+          markerId: MarkerId("destination"),
+          position: LatLng(orderProvider.currentOrder.value.destLat,
+              orderProvider.currentOrder.value.destlng),
+          // icon:
+          // BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+          // icon: BitmapDescriptor.fromBytes(sourceIconUint),
+          rotation: 0.5));
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  void updateMessengerMarker(LatLng latLng, String id) {
+    try {
+      _markers.remove(_markers
+          .firstWhere((Marker marker) => marker.markerId.value == "driver"));
+    } catch (e) {
+      print(e);
+    }
+
+    _markers.add(Marker(
+      draggable: false,
+      // This marker id can be anything that uniquely identifies each marker.
+      markerId: MarkerId(id),
+      position: latLng,
+      // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+      // icon: messengerIcon,
+      icon: BitmapDescriptor.fromBytes(driverIconUint),
+    ));
+    setState(() {});
+  }
+
+  void onOrderCancelled() {
+    setState(() {
+      _isPathCreated = false;
+      // isDistanceCal = false;
+      totalTime = "";
+      totalDistance = "";
+      totalPrice = "";
+      polylineCoordinates.clear();
+    });
+  }
+
+  _getCurrentLocation() async {
+    if (_isPathCreated) {
+      _isPathCreated = false;
+      polylineCoordinates.clear();
+      _markers.clear();
+    }
+  }
 }
-// class CustomDialog extends StatelessWidget {
-//   final String title, description, buttonText;
-//   final Image image;
-
-//   CustomDialog({
-//     @required this.title,
-//     @required this.description,
-//     @required this.buttonText,
-//     this.image,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Dialog(
-//       shape: RoundedRectangleBorder(
-//         borderRadius: BorderRadius.circular(Consts.padding),
-//       ),
-//       elevation: 0.0,
-//       backgroundColor: Colors.transparent,
-//       child: dialogContent(context),
-//     );
-//   }
-
-//   dialogContent(BuildContext context) {
-//     return Stack(
-//       children: <Widget>[
-//         Container(
-//           padding: EdgeInsets.only(
-//             top: Consts.avatarRadius + Consts.padding,
-//             bottom: Consts.padding,
-//             left: Consts.padding,
-//             right: Consts.padding,
-//           ),
-//           margin: EdgeInsets.only(top: Consts.avatarRadius),
-//           decoration: new BoxDecoration(
-//             color: Colors.white,
-//             shape: BoxShape.rectangle,
-//             borderRadius: BorderRadius.circular(Consts.padding),
-//             boxShadow: [
-//               BoxShadow(
-//                 color: Colors.black26,
-//                 blurRadius: 10.0,
-//                 offset: const Offset(0.0, 10.0),
-//               ),
-//             ],
-//           ),
-//           child: Column(
-//             mainAxisSize: MainAxisSize.min, // To make the card compact
-//             children: <Widget>[
-//               Text(
-//                 title,
-//                 style: TextStyle(
-//                   fontSize: 24.0,
-//                   fontWeight: FontWeight.w700,
-//                 ),
-//               ),
-//               SizedBox(height: 16.0),
-//               Text(
-//                 description,
-//                 textAlign: TextAlign.center,
-//                 style: TextStyle(
-//                   fontSize: 16.0,
-//                 ),
-//               ),
-//               SizedBox(height: 24.0),
-//               Align(
-//                 alignment: Alignment.bottomRight,
-//                 child: FlatButton(
-//                   onPressed: () {
-//                     Navigator.of(context).pop(); // To close the dialog
-//                   },
-//                   child: Text(buttonText),
-//                 ),
-//               ),
-//             ],
-//           ),
-//         ),
-//         Positioned(
-//           left: Consts.padding,
-//           right: Consts.padding,
-//           child: CircleAvatar(
-//             backgroundColor: Colors.blueAccent,
-//             radius: Consts.avatarRadius,
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// class Consts {
-//   Consts._();
-//   static const double padding = 16.0;
-//   static const double avatarRadius = 66.0;
-// }
