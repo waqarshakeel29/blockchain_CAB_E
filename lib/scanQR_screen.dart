@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cab_e/payment_screen.dart';
+import 'package:cab_e/shared/constants.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 // import 'package:image_gallery_saver/image_gallery_saver.dart';
@@ -25,21 +26,50 @@ class _MyScanState extends State<MyScan> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        backgroundColor: Colors.grey[300],
+        appBar: AppBar(
+          iconTheme: IconThemeData(color: AppColor.primaryDark),
+          title: Text(
+            "CAB-E",
+            style: TextStyle(
+                color: AppColor.primaryDark, fontWeight: FontWeight.bold),
+          ),
+          centerTitle: true,
+          backgroundColor: AppColor.primaryYellow,
+          elevation: 0.0,
+        ),
+        backgroundColor: Colors.white,
         body: Builder(
           builder: (BuildContext context) {
-            return ListView(
-              children: <Widget>[
-                Container(
-                  color: Colors.white,
-                  child: Column(
-                    children: <Widget>[
-                      this._buttonGroup(),
-                      SizedBox(height: 70),
-                    ],
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.all(15.0),
+                    child: Text(
+                      "You need to scan QR to pay the fare.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 25,
+                          color: AppColor.primaryDark,
+                          fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(
+                    height: 30,
+                  ),
+                  Container(
+                    color: Colors.white,
+                    child: Column(
+                      children: <Widget>[
+                        this._buttonGroup(),
+                        SizedBox(height: 70),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -48,30 +78,18 @@ class _MyScanState extends State<MyScan> {
   }
 
   Widget _buttonGroup() {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          flex: 1,
-          child: SizedBox(
-            height: 120,
-            child: InkWell(
-              onTap: _scan,
-              child: Card(
-                child: Column(
-                  children: <Widget>[
-                    Expanded(
-                      flex: 2,
-                      child: Image.asset('images/scanner.png'),
-                    ),
-                    Divider(height: 20),
-                    Expanded(flex: 1, child: Text("Scan")),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+    return MaterialButton(
+      minWidth: MediaQuery.of(context).size.width * 0.6,
+      color: AppColor.primaryYellow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18.0),
+      ),
+      child: Text(
+        "SCAN QR",
+        style:
+            TextStyle(color: AppColor.primaryDark, fontWeight: FontWeight.bold),
+      ),
+      onPressed: _scan,
     );
   }
 

@@ -404,6 +404,13 @@ class MapScreenState extends State<MapScreen> {
                 //     Duration(milliseconds: 1000),
                 //         () => Navigator.of(context).push(createRoute(OrderCompletePage(order: tempOrder)))
                 // );
+                setState(() {
+                  orderProvider.orderListener.cancel();
+                  Future.delayed(
+                      Duration(milliseconds: 1000),
+                      () => Navigator.push(context,
+                          MaterialPageRoute(builder: (context) => MyScan())));
+                });
                 return orderRide();
               }
             }()),
