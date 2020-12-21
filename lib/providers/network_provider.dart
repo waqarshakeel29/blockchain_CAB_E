@@ -10,7 +10,10 @@ class NetworkProvider {
 
   init() {
     httpClient = new Client();
-    ethClient = new Web3Client("HTTP://10.0.2.2:7545", httpClient);
+    ethClient = new Web3Client(
+        "https://ropsten.infura.io/v3/06f24ed76b204d98a4543e04cded9f6c",
+        httpClient);
+    // ethClient = new Web3Client("HTTP://10.0.2.2:7545", httpClient);
   }
 
   Future<String> sendTo(
@@ -38,13 +41,13 @@ class NetworkProvider {
     final ethFunction = contract.function(functionName);
 
     var result = await ethClient.sendTransaction(
-      credentials,
-      Transaction.callContract(
-        contract: contract,
-        function: ethFunction,
-        parameters: args,
-      ),
-    );
+        credentials,
+        Transaction.callContract(
+          contract: contract,
+          function: ethFunction,
+          parameters: args,
+        ),
+        fetchChainIdFromNetworkId: true);
     return result;
   }
 

@@ -169,12 +169,14 @@ class PaymentScreenState extends State<PaymentScreen> {
             var result = await networkProvider.sendTo(
                 BigInt.parse("1"),
                 BigInt.parse("2"),
-                BigInt.parse(
-                    widget.fare)); //result contains last transaction hash
+                BigInt.parse(double.parse(widget.fare)
+                    .toInt()
+                    .toString())); //result contains last transaction hash
+
 
             setState(() {
               // lastTransactionHash = result;
-              print("ASDFASDASDFASDA-------");
+              print("ASDFASDASDFASDA-------" + result);
               // print(lastTransactionHash);
               // _scaffoldStateKey.currentState.showSnackBar(
               //     new SnackBar(content: new Text("Wrong Credencials!")));
