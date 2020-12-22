@@ -368,7 +368,7 @@ class MapScreenState extends State<MapScreen> {
                 return orderRide();
               } else if (orderProvider.currentOrder.value.status ==
                   OrderStatus.orderCompleted) {
-                Order tempOrder = null;
+                Order tempOrder = Order();
                 Fluttertoast.showToast(
                     msg: "Order Completed",
                     backgroundColor: Colors.white,
@@ -409,7 +409,7 @@ class MapScreenState extends State<MapScreen> {
                   Future.delayed(
                       Duration(milliseconds: 1000),
                       () => Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => MyScan())));
+                          MaterialPageRoute(builder: (context) => MyScan(tempOrder))));
                 });
                 return orderRide();
               }

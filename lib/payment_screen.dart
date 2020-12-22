@@ -10,10 +10,12 @@ import 'package:http/http.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:intl/intl.dart';
 
-class PaymentScreen extends StatefulWidget {
-  PaymentScreen({Key key, this.fare}) : super(key: key);
-  String fare;
+import 'order.dart';
 
+class PaymentScreen extends StatefulWidget {
+  PaymentScreen({Key key, this.fare, this.order}) : super(key: key);
+  String fare;
+  Order order;
   @override
   State<StatefulWidget> createState() {
     return PaymentScreenState();
@@ -115,7 +117,7 @@ class PaymentScreenState extends State<PaymentScreen> {
                               flex: 2,
                             ),
                             Text(
-                              "Shahdara",
+                              widget.order.sourceLocationName,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -137,7 +139,7 @@ class PaymentScreenState extends State<PaymentScreen> {
                               flex: 2,
                             ),
                             Text(
-                              "Walton Road",
+                              widget.order.destLocationName,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -254,8 +256,9 @@ class PaymentScreenState extends State<PaymentScreen> {
             var result = await networkProvider.sendTo(
                 BigInt.parse("1"),
                 BigInt.parse("2"),
-                BigInt.parse(
-                    widget.fare)); //result contains last transaction hash
+                BigInt.parse(double.parse(widget.fare)
+                    .toInt()
+                    .toString())); //result contains last transaction hash
 
             setState(() {
               // lastTransactionHash = result;
@@ -266,7 +269,10 @@ class PaymentScreenState extends State<PaymentScreen> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => EndScreen(fare: widget.fare)));
+                      builder: (context) => EndScreen(
+                            fare: widget.fare,
+                            order: widget.order,
+                          )));
             });
             // getBalance("0x6096dBD5203A87C9a6426AEd4257Fd83fF02B20C");
           },

@@ -22,6 +22,7 @@ class NetworkProvider {
 
     var response = await submit("sendTo", [senderId, receiverId, amount]);
     // hash of the transaction
+    print("RESPONSE ------- " + response);
     return response;
   }
 

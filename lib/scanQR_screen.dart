@@ -10,7 +10,11 @@ import 'package:flutter/material.dart';
 // import 'package:image_picker/image_picker.dart';
 import 'package:qrscan/qrscan.dart' as scanner;
 
+import 'order.dart';
+
 class MyScan extends StatefulWidget {
+  Order order;
+  MyScan(this.order);
   @override
   _MyScanState createState() => _MyScanState();
 }
@@ -104,7 +108,7 @@ class _MyScanState extends State<MyScan> {
           () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => PaymentScreen(fare: barcode))));
+                  builder: (context) => PaymentScreen(fare: barcode,order: widget.order))));
     }
   }
 }

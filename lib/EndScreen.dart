@@ -1,4 +1,5 @@
 import 'package:cab_e/main.dart';
+import 'package:cab_e/map_screen.dart';
 import 'package:cab_e/providers/network_provider.dart';
 import 'package:cab_e/shared/constants.dart';
 import 'package:flutter/material.dart';
@@ -8,9 +9,12 @@ import 'package:get_it/get_it.dart';
 
 import 'package:intl/intl.dart';
 
+import 'order.dart';
+
 class EndScreen extends StatefulWidget {
-  EndScreen({Key key, this.fare}) : super(key: key);
+  EndScreen({Key key, this.fare, this.order}) : super(key: key);
   String fare;
+  Order order;
   @override
   State<StatefulWidget> createState() {
     return EndScreenState();
@@ -110,7 +114,7 @@ class EndScreenState extends State<EndScreen> {
                               flex: 2,
                             ),
                             Text(
-                              "Shahdara",
+                              widget.order.sourceLocationName,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -132,7 +136,7 @@ class EndScreenState extends State<EndScreen> {
                               flex: 2,
                             ),
                             Text(
-                              "Walton Road",
+                              widget.order.destLocationName,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -177,12 +181,15 @@ class EndScreenState extends State<EndScreen> {
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18),
                                   ),
+                                  SizedBox(
+                                    height: 20,
+                                  ),
                                   Text(
                                     '${snapshot.data[0]}',
                                     style: TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.normal,
-                                        fontSize: 18),
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 30),
                                   ),
                                 ],
                               );
@@ -220,24 +227,9 @@ class EndScreenState extends State<EndScreen> {
                 color: AppColor.primaryDark, fontWeight: FontWeight.bold),
           ),
           onPressed: () async {
-            print("ASDFASDASDFASDA-------");
-            var result = await networkProvider.sendTo(
-                BigInt.parse("1"),
-                BigInt.parse("2"),
-                BigInt.parse(
-                    widget.fare)); //result contains last transaction hash
+            Navigator.push(
+                context, MaterialPageRoute(builder: (context) => MapScreen()));
 
-            setState(() {
-              // lastTransactionHash = result;
-              print("ASDFASDASDFASDA-------");
-              // print(lastTransactionHash);
-              // _scaffoldStateKey.currentState.showSnackBar(
-              //     new SnackBar(content: new Text("Wrong Credencials!")));
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => MyHomePage(title: 'LOGIN')));
-            });
             // getBalance("0x6096dBD5203A87C9a6426AEd4257Fd83fF02B20C");
           },
         ),
