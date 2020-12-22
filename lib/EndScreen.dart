@@ -1,26 +1,23 @@
-import 'package:cab_e/constants.dart';
+import 'package:cab_e/main.dart';
 import 'package:cab_e/providers/network_provider.dart';
 import 'package:cab_e/shared/constants.dart';
-import 'package:cab_e/EndScreen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
-import 'package:http/http.dart';
-import 'package:web3dart/web3dart.dart';
+
 import 'package:intl/intl.dart';
 
-class PaymentScreen extends StatefulWidget {
-  PaymentScreen({Key key, this.fare}) : super(key: key);
+class EndScreen extends StatefulWidget {
+  EndScreen({Key key, this.fare}) : super(key: key);
   String fare;
-
   @override
   State<StatefulWidget> createState() {
-    return PaymentScreenState();
+    return EndScreenState();
   }
 }
 
-class PaymentScreenState extends State<PaymentScreen> {
+class EndScreenState extends State<EndScreen> {
   final networkProvider = GetIt.I<NetworkProvider>();
 
   @override
@@ -35,21 +32,19 @@ class PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
         body: Column(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
-          "Payment",
+          "Thanks for the Payment",
           style: TextStyle(
               color: AppColor.primaryDark,
               fontWeight: FontWeight.bold,
               fontSize: 20),
         ),
-        SizedBox(
-          height: 20,
-        ),
         Align(
           child: Container(
             child: Column(
-              //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
                   height: 30,
@@ -149,7 +144,7 @@ class PaymentScreenState extends State<PaymentScreen> {
                           //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             Text(
-                              "Trip Fare",
+                              "Paid Fare",
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -169,53 +164,31 @@ class PaymentScreenState extends State<PaymentScreen> {
                             ),
                           ],
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text(
-                              "Subtotal",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18),
-                            ),
-                            Spacer(
-                              flex: 2,
-                            ),
-                            Text(
-                              widget.fare != null
-                                  ? widget.fare + " PKR"
-                                  : "0 PKR",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text(
-                              "Total",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18),
-                            ),
-                            Spacer(
-                              flex: 2,
-                            ),
-                            Text(
-                              widget.fare != null
-                                  ? widget.fare + " PKR"
-                                  : "0 PKR",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18),
-                            ),
-                          ],
+                        FutureBuilder(
+                          future: networkProvider.getBalance(BigInt.parse("1")),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return Column(
+                                children: [
+                                  Text(
+                                    'Your Remaining Balance',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18),
+                                  ),
+                                  Text(
+                                    '${snapshot.data[0]}',
+                                    style: TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.normal,
+                                        fontSize: 18),
+                                  ),
+                                ],
+                              );
+                            } else
+                              return Text('Loading...');
+                          },
                         ),
                       ],
                     ),
@@ -235,9 +208,6 @@ class PaymentScreenState extends State<PaymentScreen> {
             height: MediaQuery.of(context).size.height * 0.6,
           ),
         ),
-        SizedBox(
-          height: 20,
-        ),
         MaterialButton(
           minWidth: MediaQuery.of(context).size.width * 0.6,
           color: AppColor.primaryYellow,
@@ -245,7 +215,7 @@ class PaymentScreenState extends State<PaymentScreen> {
             borderRadius: BorderRadius.circular(18.0),
           ),
           child: Text(
-            "Pay Now",
+            "Home",
             style: TextStyle(
                 color: AppColor.primaryDark, fontWeight: FontWeight.bold),
           ),
@@ -266,7 +236,7 @@ class PaymentScreenState extends State<PaymentScreen> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => EndScreen(fare: widget.fare)));
+                      builder: (context) => MyHomePage(title: 'LOGIN')));
             });
             // getBalance("0x6096dBD5203A87C9a6426AEd4257Fd83fF02B20C");
           },
@@ -274,6 +244,4 @@ class PaymentScreenState extends State<PaymentScreen> {
       ],
     ));
   }
-
-  // final _scaffoldStateKey = GlobalKey<ScaffoldState>(debugLabel: "Login");
 }
