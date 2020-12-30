@@ -104,7 +104,7 @@ class PaymentScreenState extends State<PaymentScreen> {
                           ],
                         ),
                         Row(
-                          //mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          mainAxisSize: MainAxisSize.max,
                           children: [
                             Text(
                               "Source",
@@ -113,15 +113,17 @@ class PaymentScreenState extends State<PaymentScreen> {
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18),
                             ),
-                            Spacer(
-                              flex: 2,
-                            ),
-                            Text(
-                              widget.order.sourceLocationName,
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18),
+                            SizedBox(width: 42),
+                            Container(
+                              width: 150,
+                              child: Text(
+                                widget.order.sourceLocationName,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18),
+                              ),
                             ),
                           ],
                         ),

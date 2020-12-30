@@ -408,8 +408,10 @@ class MapScreenState extends State<MapScreen> {
                   orderProvider.orderListener.cancel();
                   Future.delayed(
                       Duration(milliseconds: 1000),
-                      () => Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => MyScan(tempOrder))));
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => MyScan(tempOrder))));
                 });
                 return orderRide();
               }
