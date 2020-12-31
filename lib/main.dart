@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
     networkProvider.init();
 
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'CAB-E',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
