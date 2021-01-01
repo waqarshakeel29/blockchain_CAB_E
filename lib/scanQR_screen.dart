@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 // import 'package:image_picker/image_picker.dart';
 import 'package:qrscan/qrscan.dart' as scanner;
 
-import 'order.dart';
+import 'model/order.dart';
 
 class MyScan extends StatefulWidget {
   Order order;

@@ -1,5 +1,7 @@
 import 'package:cab_e/map_screen.dart';
 import 'package:cab_e/providers/network_provider.dart';
+import 'package:cab_e/providers/payment_provider.dart';
+import 'package:cab_e/providers/wallet_provider.dart';
 import 'package:cab_e/scanQR_screen.dart';
 import 'package:cab_e/shared/constants.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +14,8 @@ void main() async {
   await Firebase.initializeApp();
   GetIt.I.registerSingleton(OrderProvider());
   GetIt.I.registerSingleton(NetworkProvider());
+  GetIt.I.registerSingleton(PaymentProvider());
+  GetIt.I.registerSingleton(WalletProvider());
   runApp(MyApp());
 }
 

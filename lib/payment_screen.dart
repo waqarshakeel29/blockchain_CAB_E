@@ -1,5 +1,6 @@
 import 'package:cab_e/constants.dart';
 import 'package:cab_e/providers/network_provider.dart';
+import 'package:cab_e/providers/payment_provider.dart';
 import 'package:cab_e/shared/constants.dart';
 import 'package:cab_e/EndScreen.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,7 @@ import 'package:http/http.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:intl/intl.dart';
 
-import 'order.dart';
+import 'model/order.dart';
 
 class PaymentScreen extends StatefulWidget {
   PaymentScreen({Key key, this.fare, this.order}) : super(key: key);
@@ -24,9 +25,12 @@ class PaymentScreen extends StatefulWidget {
 
 class PaymentScreenState extends State<PaymentScreen> {
   final networkProvider = GetIt.I<NetworkProvider>();
+  final paymentProvider = GetIt.I<PaymentProvider>();
 
   @override
   void initState() {
+    paymentProvider.setDetails("1", widget.order.sourceLocationName,
+        widget.order.destLocationName, widget.fare);
     super.initState();
   }
 

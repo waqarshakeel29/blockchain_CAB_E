@@ -9,7 +9,7 @@ import 'package:get_it/get_it.dart';
 
 import 'package:intl/intl.dart';
 
-import 'order.dart';
+import 'model/order.dart';
 
 class EndScreen extends StatefulWidget {
   EndScreen({Key key, this.fare, this.order}) : super(key: key);

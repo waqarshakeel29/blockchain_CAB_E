@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../order.dart';
+import '../model/order.dart';
 
 class MapProvider {
   ValueNotifier<Order> currentOrder = ValueNotifier(null);

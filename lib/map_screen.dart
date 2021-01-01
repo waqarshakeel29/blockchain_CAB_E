@@ -23,7 +23,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:http/http.dart' as http;
 import 'custom_search.dart';
-import 'order.dart';
+import 'model/order.dart';
 import 'scanQR_screen.dart';
 
 class MapScreen extends StatefulWidget {

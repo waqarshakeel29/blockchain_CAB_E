@@ -1,5 +1,6 @@
 import 'package:cab_e/constants.dart';
 import 'package:cab_e/providers/network_provider.dart';
+import 'package:cab_e/providers/wallet_provider.dart';
 import 'package:cab_e/shared/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ class WalletScreen extends StatefulWidget {
 
 class WalletScreenState extends State<WalletScreen> {
   final networkProvider = GetIt.I<NetworkProvider>();
+  final walletProvider = GetIt.I<WalletProvider>();
 
   @override
   void initState() {
@@ -44,7 +46,8 @@ class WalletScreenState extends State<WalletScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             FutureBuilder(
-              future: networkProvider.getBalance(BigInt.parse("1")),
+              future: walletProvider
+                  .getBalance(), //networkProvider.getBalance(BigInt.parse("1")),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   return Column(
