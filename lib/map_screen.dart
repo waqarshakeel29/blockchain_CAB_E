@@ -300,7 +300,7 @@ class MapScreenState extends State<MapScreen> {
                 //                     ))));
                 //   });
                 // }
-                return orderRide();
+                // return orderRide();
               } else if (orderProvider.currentOrder.value.status ==
                   OrderStatus.findingDriver) {
                 return confirmRide();
