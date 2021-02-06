@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:android_intent/android_intent.dart';
+import 'package:cab_e/shared/MySeperator.dart';
 import 'package:flutter/services.dart' show SystemChrome, rootBundle;
 
 import 'package:awesome_dialog/awesome_dialog.dart';
@@ -40,6 +41,10 @@ class MapScreenState extends State<MapScreen> {
   final Key _mapKey = UniqueKey();
 
   // Pickup - Dropoff - LagLngSource - LatLngDestination
+  bool pickUpSelected = false;
+  bool dropOffSelected = false;
+  bool confirmPressed = false;
+
   String pickUp = "";
   String dropOff = "";
   LatLng latLngSource = null;
@@ -190,6 +195,543 @@ class MapScreenState extends State<MapScreen> {
         .asUint8List();
   }
 
+  Widget getSlidePanel() {
+    var mediaQuerySize = MediaQuery.of(context).size;
+    SlidingUpPanel s = SlidingUpPanel(
+      controller: panelController,
+      maxHeight: _isPathCreated
+          ? mediaQuerySize.height * 0.40
+          : true ? 0 : mediaQuerySize.height * 0.30,
+      minHeight: _isPathCreated ? mediaQuerySize.height * 0.055 : 0,
+      body: Stack(
+        children: [
+          GoogleMap(
+            myLocationEnabled: false,
+            mapType: MapType.terrain,
+            polylines: Set<Polyline>.of(polylines.values),
+            key: _mapKey,
+            zoomControlsEnabled: false,
+            markers: _markers,
+            compassEnabled: true,
+            onMapCreated: _onMapCreated,
+            initialCameraPosition: CameraPosition(
+              target: LatLng(30.3753, 69.3451),
+              bearing: 90,
+              tilt: 30,
+              zoom: 5.0,
+            ),
+          ),
+          Card(
+            elevation: 10,
+            margin: EdgeInsets.only(right: 20, left: 20, top: 20),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                height: mediaQuerySize.height * 0.145,
+                width: mediaQuerySize.width,
+                child: Row(
+                  children: [
+                    Container(
+                      width: mediaQuerySize.width * 0.025,
+                    ),
+                    Container(
+                      width: mediaQuerySize.width * 0.1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            height: mediaQuerySize.height * 0.022,
+                          ),
+                          Icon(
+                            Icons.home,
+                            color: Colors.blue[600],
+                          ),
+                          SizedBox(
+                            height: mediaQuerySize.height * 0.002,
+                          ),
+                          Expanded(
+                              child: MySeparator(
+                            color: Colors.grey[500],
+                            height: 2,
+                          )),
+                          SizedBox(
+                            height: mediaQuerySize.height * 0.002,
+                          ),
+                          Icon(
+                            Icons.location_on,
+                            color: Color(0xFFe87c5f),
+                          ),
+                          SizedBox(
+                            height: mediaQuerySize.height * 0.022,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: mediaQuerySize.width * 0.025,
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            width: MediaQuery.of(context).size.width -
+                                (MediaQuery.of(context).size.width * 0.1) -
+                                (MediaQuery.of(context).size.width *
+                                    0.25 *
+                                    0.25) -
+                                40 -
+                                16,
+                            child: GestureDetector(
+                              onTap: () async {
+                                FocusScope.of(context).unfocus();
+                                var result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            CustomSearchScaffold(
+                                                text: pickUp)));
+                                if (result != null) {
+                                  if (result.toString() == SELECT_FROM_MAP) {
+                                    // var res = await Navigator.push(
+                                    //   context,
+                                    //   MaterialPageRoute(
+                                    //     builder: (context) => PlacePicker(
+                                    //       apiKey:
+                                    //           GOOGLE_API_KEY, // Put YOUR OWN KEY here.
+                                    //       initialPosition: _center,
+                                    //       useCurrentLocation: false,
+                                    //     ),
+                                    //   ),
+                                    // );
+                                    // setState(() {
+                                    //   pickUp = res.formattedAddress;
+                                    //   print("RESULT ___ _ _ _ __  _ $pickUp");
+                                    //   latLngSource = LatLng(res.geometry.location.lat,
+                                    //       res.geometry.location.lng);
+                                    //   addMarker(latLngSource, "Source");
+                                    // });
+                                  } else {
+                                    setState(() {
+                                      pickUp = result.name;
+                                      pickUpSelected = true;
+                                      print("RESULT ___ _ _ _ __  _ $pickUp");
+                                      latLngSource = LatLng(
+                                          result.geometry.location.lat,
+                                          result.geometry.location.lng);
+                                      print(
+                                          "LAGLNG ___ _ _ _ __  _ $latLngSource");
+                                      addMarker(latLngSource, "Source");
+                                    });
+                                  }
+//                              addMarker(latLngSource, "Source");
+                                }
+                              },
+                              child: Container(
+                                width: MediaQuery.of(context).size.width * 0.6,
+                                height: 30,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 5),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: <Widget>[
+                                      (pickUp == "")
+                                          ? Expanded(
+                                              child: Text(
+                                                "Pickup Location",
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    // fontWeight:
+                                                    //     FontWeight.bold,
+                                                    color: Colors.black
+                                                        .withOpacity(0.5)),
+                                              ),
+                                            )
+                                          : Expanded(
+                                              child: Text(
+                                                pickUp,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.black
+                                                        .withOpacity(0.9)),
+                                              ),
+                                            ),
+                                      pickUp != ""
+                                          ? GestureDetector(
+                                              child: Icon(
+                                                Icons.close,
+                                                color: Colors.grey[400],
+                                                size: 27,
+                                              ),
+                                              onTap: () {
+                                                setState(() {
+                                                  pickUp = "";
+                                                  pickUpSelected = false;
+                                                  try {
+                                                    _markers.remove(
+                                                        _markers.firstWhere(
+                                                            (Marker marker) =>
+                                                                marker.markerId
+                                                                    .value ==
+                                                                "Source"));
+                                                  } catch (e) {
+                                                    print(e);
+                                                  }
+                                                });
+                                              },
+                                            )
+                                          : Container()
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          height: 1,
+                          child: Container(
+                            height: 1,
+                            width: MediaQuery.of(context).size.width -
+                                (MediaQuery.of(context).size.width * 0.1) -
+                                (MediaQuery.of(context).size.width *
+                                    0.25 *
+                                    0.25) -
+                                40 -
+                                16,
+                            color: Colors.black12,
+                          ),
+                        ),
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            width: MediaQuery.of(context).size.width -
+                                (MediaQuery.of(context).size.width * 0.1) -
+                                (MediaQuery.of(context).size.width *
+                                    0.25 *
+                                    0.25) -
+                                40 -
+                                16,
+                            child: GestureDetector(
+                              onTap: () async {
+                                FocusScope.of(context).unfocus();
+                                var result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            CustomSearchScaffold(
+                                                text: dropOff)));
+                                if (result != null) {
+                                  if (result.toString() == SELECT_FROM_MAP) {
+                                    // var res = await Navigator.push(
+                                    //   context,
+                                    //   MaterialPageRoute(
+                                    //     builder: (context) => PlacePicker(
+                                    //       apiKey:
+                                    //           GOOGLE_API_KEY, // Put YOUR OWN KEY here.
+                                    //       initialPosition: _center,
+                                    //       useCurrentLocation: false,
+                                    //     ),
+                                    //   ),
+                                    // );
+                                    // setState(() {
+                                    //   pickUp = res.formattedAddress;
+                                    //   print("RESULT ___ _ _ _ __  _ $pickUp");
+                                    //   latLngSource = LatLng(res.geometry.location.lat,
+                                    //       res.geometry.location.lng);
+                                    //   addMarker(latLngSource, "Source");
+                                    // });
+                                  } else {
+                                    setState(() {
+                                      dropOff = result.name;
+                                      dropOffSelected = true;
+                                      print("RESULT ___ _ _ _ __  _ $dropOff");
+                                      latLngDestination = LatLng(
+                                          result.geometry.location.lat,
+                                          result.geometry.location.lng);
+                                      print(
+                                          "LAGLNG ___ _ _ _ __  _ $latLngDestination");
+                                      addMarker(
+                                          latLngDestination, "Destination");
+                                    });
+                                  }
+//                              addMarker(latLngSource, "Source");
+                                }
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                ),
+                                width: MediaQuery.of(context).size.width * 0.6,
+                                height: 30,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 5),
+                                  child: Row(
+                                    children: <Widget>[
+                                      (dropOff == "")
+                                          ? Expanded(
+                                              child: Text(
+                                                "Destination Location",
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    // fontWeight:
+                                                    //     FontWeight.w400,
+                                                    color: Colors.black
+                                                        .withOpacity(0.5)),
+                                              ),
+                                            )
+                                          : Expanded(
+                                              child: Text(
+                                              dropOff,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.black
+                                                      .withOpacity(0.9)),
+                                            )),
+                                      dropOff != ""
+                                          ? GestureDetector(
+                                              child: Icon(
+                                                Icons.close,
+                                                color: Colors.grey[400],
+                                                size: 27,
+                                              ),
+                                              onTap: () {
+                                                setState(() {
+                                                  dropOff = "";
+                                                  dropOffSelected = false;
+                                                  try {
+                                                    _markers.remove(
+                                                        _markers.firstWhere(
+                                                            (Marker marker) =>
+                                                                marker.markerId
+                                                                    .value ==
+                                                                "Destination"));
+                                                  } catch (e) {
+                                                    print(e);
+                                                  }
+                                                });
+                                              },
+                                            )
+                                          : Container()
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          showConfirmButton()
+        ],
+      ),
+      collapsed: GestureDetector(
+        onTap: () {
+          setState(() {
+            if (panelController.isPanelClosed) {
+              panelController.open();
+            } else {
+              panelController.close();
+            }
+          });
+        },
+        child: Container(
+          // color: AppColor.primaryYellow,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 15, right: 15),
+            child: Row(
+              children: [
+                Text(
+                  "Order a Ride",
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 25),
+                ),
+                Expanded(child: SizedBox()),
+                Icon(
+                  Icons.arrow_upward,
+                  color: Colors.white,
+                )
+              ],
+            ),
+          ),
+          decoration: BoxDecoration(
+            color: AppColor.primaryYellow,
+            border: Border.all(color: AppColor.primaryYellow),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20.0),
+              topRight: Radius.circular(20.0),
+            ),
+          ),
+        ),
+      ),
+      panel: (() {
+        print("YES_2 ------------------------ ");
+        if (orderProvider.currentOrder.value == null) {
+          if (_isPathCreated) {
+            return confirmRide();
+          } else {
+            return orderRide();
+          }
+          // if (orderProvider.currentOrder.value.driverId != null &&
+          //     orderProvider.currentOrder.value.driverId != "" &&
+          //     orderProvider.currentOrder.value.isCatered == false) {
+          //   FirebaseFirestore.instance
+          //       .collection("order")
+          //       .doc(orderProvider.currentOrder.value.orderId)
+          //       .update({
+          //     "orderStatus": OrderStatus.orderCompleted.index,
+          //     "isCatered": true
+          //   }).then((_) {
+          //     print("success-Completed!");
+          //   });
+
+          //   print("YES_1 ------------------------ ");
+          //   setState(() {
+          //     orderProvider.orderListener.cancel();
+          //     Future.delayed(
+          //         Duration(milliseconds: 1000),
+          //         () => Navigator.push(
+          //             context,
+          //             MaterialPageRoute(
+          //                 builder: (context) => MyScan(
+
+          //                     ))));
+          //   });
+          // }
+          // return orderRide();
+        } else if (orderProvider.currentOrder.value.status ==
+            OrderStatus.findingDriver) {
+          return confirmRide();
+        } else if (orderProvider.currentOrder.value.status ==
+            OrderStatus.findingDriverFailed) {
+          setState(() {
+            orderProvider.orderListener.cancel();
+            orderProvider.isFindingOrder.value = false;
+            panelController.close();
+            FirebaseFirestore.instance
+                .collection("order")
+                .doc(orderProvider.currentOrder.value.orderId)
+                .update({
+              "orderStatus": OrderStatus.findingDriverFailed.index,
+              "isCatered": true
+            }).then((_) {
+              panelController.open();
+              print("success-Failed!");
+            });
+            orderProvider.currentOrder.value = null;
+            return orderRide();
+          });
+        } else if (orderProvider.currentOrder.value.status ==
+            OrderStatus.driverOnWay) {
+          setState(() {
+            orderProvider.isFindingOrder.value = false;
+            updateMessengerMarker(
+                LatLng(orderProvider.currentOrder.value.driverLat,
+                    orderProvider.currentOrder.value.driverLng),
+                "driver");
+          });
+          return onTheWayRide();
+        } else if (orderProvider.currentOrder.value.status ==
+            OrderStatus.orderCancelled) {
+          Fluttertoast.showToast(
+              msg: "Order Cancelled",
+              backgroundColor: Colors.white,
+              textColor: Colors.black,
+              toastLength: Toast.LENGTH_LONG);
+          setState(() {
+            instructionText = "";
+            // instructionController.text = "";
+            orderProvider.orderListener.cancel();
+            orderProvider.isFindingOrder.value = false;
+            // _showMaps = true;
+            panelController.close();
+            FirebaseFirestore.instance
+                .collection("order")
+                .doc(orderProvider.currentOrder.value.orderId)
+                .update({
+              "orderStatus": OrderStatus.orderCancelled.index,
+              "isCatered": true
+            }).then((_) {
+              panelController.open();
+              print("success-Cancelled!");
+            });
+            _markers.clear();
+            // orderProvider.currentOrder.value = null;
+          });
+          onOrderCancelled();
+          pickUp = "";
+          dropOff = "";
+          // dateTime = "Date/Time";
+          _getCurrentLocation();
+          return orderRide();
+        } else if (orderProvider.currentOrder.value.status ==
+            OrderStatus.orderCompleted) {
+          Order tempOrder = Order();
+          Fluttertoast.showToast(
+              msg: "Order Completed",
+              backgroundColor: Colors.white,
+              textColor: Colors.black,
+              toastLength: Toast.LENGTH_LONG);
+          setState(() {
+            // instructionText = "";
+            // instructionController.text = "";
+            orderProvider.orderListener.cancel();
+            orderProvider.isFindingOrder.value = false;
+            // _showMaps = true;
+            panelController.close();
+            FirebaseFirestore.instance
+                .collection("order")
+                .doc(orderProvider.currentOrder.value.orderId)
+                .update({
+              "orderStatus": OrderStatus.orderCompleted.index,
+              "isCatered": true
+            }).then((_) {
+              panelController.open();
+              print("success-Completed!");
+            });
+            _markers.clear();
+            tempOrder = orderProvider.currentOrder.value;
+            orderProvider.currentOrder.value = null;
+          });
+          onOrderCancelled();
+          pickUp = "";
+          dropOff = "";
+          // dateTime = "Date/Time";
+          _getCurrentLocation();
+          // Future.delayed(
+          //     Duration(milliseconds: 1000),
+          //         () => Navigator.of(context).push(createRoute(OrderCompletePage(order: tempOrder)))
+          // );
+          setState(() {
+            orderProvider.orderListener.cancel();
+            Future.delayed(
+                Duration(milliseconds: 1000),
+                () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => MyScan(tempOrder))));
+          });
+          return orderRide();
+        }
+      }()),
+      color: AppColor.primaryDark,
+      borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+    );
+    // panelController.hide();
+    return s;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -207,218 +749,7 @@ class MapScreenState extends State<MapScreen> {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          SlidingUpPanel(
-            controller: panelController,
-            maxHeight: _isPathCreated
-                ? MediaQuery.of(context).size.height * 0.40
-                : MediaQuery.of(context).size.height * 0.30,
-            minHeight: MediaQuery.of(context).size.height * 0.055,
-            body: Stack(
-              children: [
-                GoogleMap(
-                  myLocationEnabled: false,
-                  mapType: MapType.terrain,
-                  polylines: Set<Polyline>.of(polylines.values),
-                  key: _mapKey,
-                  zoomControlsEnabled: false,
-                  markers: _markers,
-                  compassEnabled: true,
-                  onMapCreated: _onMapCreated,
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(30.3753, 69.3451),
-                    bearing: 90,
-                    tilt: 30,
-                    zoom: 5.0,
-                  ),
-                )
-              ],
-            ),
-            collapsed: GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (panelController.isPanelClosed) {
-                    panelController.open();
-                  } else {
-                    panelController.close();
-                  }
-                });
-              },
-              child: Container(
-                color: AppColor.primaryDark,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 15, right: 15),
-                  child: Row(
-                    children: [
-                      Text(
-                        "Order a Ride",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 25),
-                      ),
-                      Expanded(child: SizedBox()),
-                      Icon(
-                        Icons.arrow_upward,
-                        color: Colors.white,
-                      )
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            panel: (() {
-              print("YES_2 ------------------------ ");
-              if (orderProvider.currentOrder.value == null) {
-                if (_isPathCreated) {
-                  return confirmRide();
-                } else {
-                  return orderRide();
-                }
-                // if (orderProvider.currentOrder.value.driverId != null &&
-                //     orderProvider.currentOrder.value.driverId != "" &&
-                //     orderProvider.currentOrder.value.isCatered == false) {
-                //   FirebaseFirestore.instance
-                //       .collection("order")
-                //       .doc(orderProvider.currentOrder.value.orderId)
-                //       .update({
-                //     "orderStatus": OrderStatus.orderCompleted.index,
-                //     "isCatered": true
-                //   }).then((_) {
-                //     print("success-Completed!");
-                //   });
-
-                //   print("YES_1 ------------------------ ");
-                //   setState(() {
-                //     orderProvider.orderListener.cancel();
-                //     Future.delayed(
-                //         Duration(milliseconds: 1000),
-                //         () => Navigator.push(
-                //             context,
-                //             MaterialPageRoute(
-                //                 builder: (context) => MyScan(
-
-                //                     ))));
-                //   });
-                // }
-                // return orderRide();
-              } else if (orderProvider.currentOrder.value.status ==
-                  OrderStatus.findingDriver) {
-                return confirmRide();
-              } else if (orderProvider.currentOrder.value.status ==
-                  OrderStatus.findingDriverFailed) {
-                setState(() {
-                  orderProvider.orderListener.cancel();
-                  orderProvider.isFindingOrder.value = false;
-                  panelController.close();
-                  FirebaseFirestore.instance
-                      .collection("order")
-                      .doc(orderProvider.currentOrder.value.orderId)
-                      .update({
-                    "orderStatus": OrderStatus.findingDriverFailed.index,
-                    "isCatered": true
-                  }).then((_) {
-                    panelController.open();
-                    print("success-Failed!");
-                  });
-                  orderProvider.currentOrder.value = null;
-                  return orderRide();
-                });
-              } else if (orderProvider.currentOrder.value.status ==
-                  OrderStatus.driverOnWay) {
-                setState(() {
-                  orderProvider.isFindingOrder.value = false;
-                  updateMessengerMarker(
-                      LatLng(orderProvider.currentOrder.value.driverLat,
-                          orderProvider.currentOrder.value.driverLng),
-                      "driver");
-                });
-                return onTheWayRide();
-              } else if (orderProvider.currentOrder.value.status ==
-                  OrderStatus.orderCancelled) {
-                Fluttertoast.showToast(
-                    msg: "Order Cancelled",
-                    backgroundColor: Colors.white,
-                    textColor: Colors.black,
-                    toastLength: Toast.LENGTH_LONG);
-                setState(() {
-                  instructionText = "";
-                  // instructionController.text = "";
-                  orderProvider.orderListener.cancel();
-                  orderProvider.isFindingOrder.value = false;
-                  // _showMaps = true;
-                  panelController.close();
-                  FirebaseFirestore.instance
-                      .collection("order")
-                      .doc(orderProvider.currentOrder.value.orderId)
-                      .update({
-                    "orderStatus": OrderStatus.orderCancelled.index,
-                    "isCatered": true
-                  }).then((_) {
-                    panelController.open();
-                    print("success-Cancelled!");
-                  });
-                  _markers.clear();
-                  // orderProvider.currentOrder.value = null;
-                });
-                onOrderCancelled();
-                pickUp = "";
-                dropOff = "";
-                // dateTime = "Date/Time";
-                _getCurrentLocation();
-                return orderRide();
-              } else if (orderProvider.currentOrder.value.status ==
-                  OrderStatus.orderCompleted) {
-                Order tempOrder = Order();
-                Fluttertoast.showToast(
-                    msg: "Order Completed",
-                    backgroundColor: Colors.white,
-                    textColor: Colors.black,
-                    toastLength: Toast.LENGTH_LONG);
-                setState(() {
-                  // instructionText = "";
-                  // instructionController.text = "";
-                  orderProvider.orderListener.cancel();
-                  orderProvider.isFindingOrder.value = false;
-                  // _showMaps = true;
-                  panelController.close();
-                  FirebaseFirestore.instance
-                      .collection("order")
-                      .doc(orderProvider.currentOrder.value.orderId)
-                      .update({
-                    "orderStatus": OrderStatus.orderCompleted.index,
-                    "isCatered": true
-                  }).then((_) {
-                    panelController.open();
-                    print("success-Completed!");
-                  });
-                  _markers.clear();
-                  tempOrder = orderProvider.currentOrder.value;
-                  orderProvider.currentOrder.value = null;
-                });
-                onOrderCancelled();
-                pickUp = "";
-                dropOff = "";
-                // dateTime = "Date/Time";
-                _getCurrentLocation();
-                // Future.delayed(
-                //     Duration(milliseconds: 1000),
-                //         () => Navigator.of(context).push(createRoute(OrderCompletePage(order: tempOrder)))
-                // );
-                setState(() {
-                  orderProvider.orderListener.cancel();
-                  Future.delayed(
-                      Duration(milliseconds: 1000),
-                      () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => MyScan(tempOrder))));
-                });
-                return orderRide();
-              }
-            }()),
-            color: AppColor.primaryDark,
-            margin: EdgeInsets.only(right: 30, left: 30),
-          ),
+          getSlidePanel(),
           orderProvider.isFindingOrder.value == true
               ? Container(
                   width: double.maxFinite,
@@ -434,7 +765,7 @@ class MapScreenState extends State<MapScreen> {
       ),
       drawer: Drawer(
         child: Container(
-          color: AppColor.primaryDark,
+          color: AppColor.primaryYellow,
           child: ListView(
             // Important: Remove any padding from the ListView.
             padding: EdgeInsets.zero,
@@ -767,6 +1098,7 @@ class MapScreenState extends State<MapScreen> {
                     } else {
                       setState(() {
                         pickUp = result.name;
+                        pickUpSelected = true;
                         print("RESULT ___ _ _ _ __  _ $pickUp");
                         latLngSource = LatLng(result.geometry.location.lat,
                             result.geometry.location.lng);
@@ -972,189 +1304,164 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Widget confirmRide() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Container(
-            width: MediaQuery.of(context).size.width * 0.8,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Container(
+      color: AppColor.primaryYellow,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Container(
+              width: MediaQuery.of(context).size.width * 0.8,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Container(
+                    alignment: Alignment.center,
+                    width: 70,
+                    height: 70,
+                    child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(children: <TextSpan>[
+                          TextSpan(
+                              text: totalDistance + "\n",
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColor.primaryYellow)),
+                          TextSpan(
+                              text: "KM",
+                              style: TextStyle(
+                                  fontSize: 13, color: AppColor.primaryYellow)),
+                        ])),
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: Colors.white),
+                  ),
+                  Container(
+                    alignment: Alignment.center,
+                    width: MediaQuery.of(context).size.width * 0.2,
+                    height: 100,
+                    child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(children: <TextSpan>[
+                          TextSpan(
+                              text: totalPrice + "\n",
+                              style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColor.primaryYellow)),
+                          TextSpan(
+                              text: "Rs",
+                              style: TextStyle(
+                                  fontSize: 15, color: AppColor.primaryYellow)),
+                        ])),
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: Colors.white),
+                  ),
+                  Container(
+                    alignment: Alignment.center,
+                    width: 70,
+                    height: 70,
+                    child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(children: <TextSpan>[
+                          TextSpan(
+                              text: totalTime + "\n",
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColor.primaryYellow)),
+                          TextSpan(
+                              text: totalTimeMin ? "Min" : "Hrs",
+                              style: TextStyle(
+                                  fontSize: 15, color: AppColor.primaryYellow)),
+                        ])),
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  alignment: Alignment.center,
-                  width: 70,
-                  height: 70,
-                  child: RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(children: <TextSpan>[
-                        TextSpan(
-                            text: totalDistance + "\n",
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColor.primaryDark)),
-                        TextSpan(
-                            text: "KM",
-                            style: TextStyle(
-                                fontSize: 13, color: AppColor.primaryDark)),
-                      ])),
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: Colors.white),
+                Icon(
+                  Icons.home,
+                  color: AppColor.primaryYellow,
+                ),
+                SizedBox(
+                  width: 5,
                 ),
                 Container(
-                  alignment: Alignment.center,
-                  width: MediaQuery.of(context).size.width * 0.2,
-                  height: 100,
-                  child: RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(children: <TextSpan>[
-                        TextSpan(
-                            text: totalPrice + "\n",
-                            style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColor.primaryDark)),
-                        TextSpan(
-                            text: "Rs",
-                            style: TextStyle(
-                                fontSize: 15, color: AppColor.primaryDark)),
-                      ])),
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: Colors.white),
-                ),
-                Container(
-                  alignment: Alignment.center,
-                  width: 70,
-                  height: 70,
-                  child: RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(children: <TextSpan>[
-                        TextSpan(
-                            text: totalTime + "\n",
-                            style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColor.primaryDark)),
-                        TextSpan(
-                            text: totalTimeMin ? "Min" : "Hrs",
-                            style: TextStyle(
-                                fontSize: 15, color: AppColor.primaryDark)),
-                      ])),
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: Colors.white),
+                  // decoration: _boxDecoration,
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  height: 30,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 5),
+                    child: Row(
+                      children: <Widget>[
+                        Flexible(
+                            child: Text(
+                          pickUp,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 15,
+                              color: AppColor.primaryYellow.withOpacity(0.9)),
+                        )),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.home,
-                color: AppColor.primaryYellow,
-              ),
-              SizedBox(
-                width: 5,
-              ),
-              Container(
-                // decoration: _boxDecoration,
-                width: MediaQuery.of(context).size.width * 0.6,
-                height: 30,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 5),
-                  child: Row(
-                    children: <Widget>[
-                      Flexible(
-                          child: Text(
-                        pickUp,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 15,
-                            color: AppColor.primaryYellow.withOpacity(0.9)),
-                      )),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.home,
-                color: AppColor.primaryYellow,
-              ),
-              SizedBox(
-                width: 5,
-              ),
-              Container(
-                // decoration: _boxDecoration,
-                width: MediaQuery.of(context).size.width * 0.6,
-                height: 30,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 5),
-                  child: Row(
-                    children: <Widget>[
-                      Flexible(
-                          child: Text(
-                        dropOff,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 15,
-                            color: AppColor.primaryYellow.withOpacity(0.9)),
-                      )),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Divider(color: Colors.white),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              RaisedButton(
-                color: Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Text(
-                    "CANCEL",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColor.primaryDark,
-                        fontSize: 18),
-                  ),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                  side: BorderSide(color: AppColor.primaryYellow),
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isPathCreated = false;
-                    totalTime = "";
-                    totalDistance = "";
-                    totalPrice = "";
-                    polylineCoordinates.clear();
-                    addMarker(latLngSource, "source");
-                  });
-                },
-              ),
-              RaisedButton(
+            SizedBox(
+              height: 10,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.home,
                   color: AppColor.primaryYellow,
+                ),
+                SizedBox(
+                  width: 5,
+                ),
+                Container(
+                  // decoration: _boxDecoration,
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  height: 30,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 5),
+                    child: Row(
+                      children: <Widget>[
+                        Flexible(
+                            child: Text(
+                          dropOff,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 15,
+                              color: AppColor.primaryYellow.withOpacity(0.9)),
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Divider(color: Colors.white),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                RaisedButton(
+                  color: Colors.white,
                   child: Padding(
                     padding: const EdgeInsets.all(10.0),
                     child: Text(
-                      "CONFIRM",
+                      "CANCEL",
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColor.primaryDark,
+                          color: AppColor.primaryYellow,
                           fontSize: 18),
                     ),
                   ),
@@ -1162,63 +1469,95 @@ class MapScreenState extends State<MapScreen> {
                     borderRadius: BorderRadius.circular(30.0),
                     side: BorderSide(color: AppColor.primaryYellow),
                   ),
-                  onPressed: () async {
-                    // showDialog(
-                    //   context: context,
-                    //   builder: (BuildContext context) => CustomDialog(
-                    //     title: "Success",
-                    //     description:
-                    //         "Ride has been finished! ",
-                    //     buttonText: "Okay",
-                    //   ),
-                    // );
+                  onPressed: () {
+                    setState(() {
+                      confirmPressed = false;
+                      _isPathCreated = false;
+                      totalTime = "";
+                      totalDistance = "";
+                      totalPrice = "";
+                      polylineCoordinates.clear();
+                      addMarker(latLngSource, "Source");
+                      panelController.close();
+                    });
+                  },
+                ),
+                RaisedButton(
+                    color: AppColor.primaryYellow,
+                    child: Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Text(
+                        "CONFIRM",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColor.primaryDark,
+                            fontSize: 18),
+                      ),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                      side: BorderSide(color: AppColor.primaryYellow),
+                    ),
+                    onPressed: () async {
+                      // showDialog(
+                      //   context: context,
+                      //   builder: (BuildContext context) => CustomDialog(
+                      //     title: "Success",
+                      //     description:
+                      //         "Ride has been finished! ",
+                      //     buttonText: "Okay",
+                      //   ),
+                      // );
 
-                    int orderNo = 1;
-                    // if (myOrder.docs.length != 0) {
-                    //   orderNo =
-                    //       Order.fromMap(myOrder.docs[0].data()).userOrderNo + 1;
-                    // }
+                      int orderNo = 1;
+                      // if (myOrder.docs.length != 0) {
+                      //   orderNo =
+                      //       Order.fromMap(myOrder.docs[0].data()).userOrderNo + 1;
+                      // }
 
-                    Order order = Order();
-                    order.userOrderNo = orderNo;
-                    order.isCatered = false;
-                    order.orderId = Uuid().generateV4();
-                    order.sourceLat = latLngSource.latitude;
-                    order.sourceLng = latLngSource.longitude;
-                    order.destLat = latLngDestination.latitude;
-                    order.destlng = latLngDestination.longitude;
-                    order.destLocationName = dropOff;
-                    order.sourceLocationName = pickUp;
-                    order.instruction = instructionText;
-                    order.creationTime = DateTime.now().millisecondsSinceEpoch;
-                    // order.scheduledTime = selectedDate.millisecondsSinceEpoch;
-                    order.userUid = "1";
-                    order.fare = double.parse(totalPrice);
+                      Order order = Order();
+                      order.userOrderNo = orderNo;
+                      order.isCatered = false;
+                      order.orderId = Uuid().generateV4();
+                      order.sourceLat = latLngSource.latitude;
+                      order.sourceLng = latLngSource.longitude;
+                      order.destLat = latLngDestination.latitude;
+                      order.destlng = latLngDestination.longitude;
+                      order.destLocationName = dropOff;
+                      order.sourceLocationName = pickUp;
+                      order.instruction = instructionText;
+                      order.creationTime =
+                          DateTime.now().millisecondsSinceEpoch;
+                      // order.scheduledTime = selectedDate.millisecondsSinceEpoch;
+                      order.userUid = "1";
+                      order.fare = double.parse(totalPrice);
 
-                    order.status = OrderStatus.findingDriver;
+                      order.status = OrderStatus.findingDriver;
 
-                    bool isUploaded = await orderProvider.uploadOrderNow(order);
+                      bool isUploaded =
+                          await orderProvider.uploadOrderNow(order);
 
-                    if (isUploaded) {
-                      // orderProvider.sendNotification(
-                      //     'notifier', order.orderId);
+                      if (isUploaded) {
+                        // orderProvider.sendNotification(
+                        //     'notifier', order.orderId);
 
-                      // Navigator.push(
-                      //     context,
-                      //     MaterialPageRoute(
-                      //         builder: (context) => PaymentScreen(
-                      //               fare: totalPrice,
-                      //             )));
+                        // Navigator.push(
+                        //     context,
+                        //     MaterialPageRoute(
+                        //         builder: (context) => PaymentScreen(
+                        //               fare: totalPrice,
+                        //             )));
 
-                      orderProvider.listenOrder(
-                          orderProvider.currentOrder.value.orderId,
-                          messengerCallback);
-                      findMessenger(120);
-                    }
-                  }),
-            ],
-          ),
-        ],
+                        orderProvider.listenOrder(
+                            orderProvider.currentOrder.value.orderId,
+                            messengerCallback);
+                        findMessenger(120);
+                      }
+                    }),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1546,5 +1885,102 @@ class MapScreenState extends State<MapScreen> {
       polylineCoordinates.clear();
       _markers.clear();
     }
+  }
+
+  showConfirmButton() {
+    // panelController.hide();
+    var mediaQuerySize = MediaQuery.of(context).size;
+    return pickUpSelected && dropOffSelected && !confirmPressed
+        ? Positioned(
+            bottom: 100,
+            left: 20,
+            child: MaterialButton(
+              minWidth: mediaQuerySize.width - 40,
+              color: AppColor.primaryYellow,
+              child: Padding(
+                padding: const EdgeInsets.all(13.0),
+                child: Text(
+                  "CONFIRM",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColor.primaryDark,
+                      fontSize: 18),
+                ),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4.0),
+                side: BorderSide(color: AppColor.primaryYellow),
+              ),
+              onPressed: () {
+                setState(() {
+                  confirmPressed = true;
+                });
+
+                int count = 2;
+                // if (latLngSource == null) {
+                //   count = count - 1;
+                //   Fluttertoast.showToast(
+                //       msg: "Source is not Selected!",
+                //       backgroundColor: Colors.white,
+                //       textColor: Colors.black,
+                //       toastLength: Toast.LENGTH_LONG);
+                // }
+                // if (latLngDestination == null) {
+                //   count = count - 1;
+                //   Fluttertoast.showToast(
+                //       msg: "Destination is not Selected!",
+                //       backgroundColor: Colors.white,
+                //       textColor: Colors.black,
+                //       toastLength: Toast.LENGTH_LONG);
+                //
+                // }
+                if (count == 2) {
+                  var source = Position(
+                      latitude: latLngSource.latitude,
+                      longitude: latLngSource.longitude);
+                  var destination = Position(
+                      latitude: latLngDestination.latitude,
+                      longitude: latLngDestination.longitude);
+
+                  ////
+                  FocusScope.of(context).unfocus();
+
+                  _markers.clear();
+
+                  //// Adding Source and Destination marker
+                  _markers.add(Marker(
+                    draggable: false,
+                    // This marker id can be anything that uniquely identifies each marker.
+                    markerId: MarkerId("start"),
+                    position: latLngSource,
+                    // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+                  ));
+                  _markers.add(Marker(
+                    draggable: false,
+                    // This marker id can be anything that uniquely identifies each marker.
+                    markerId: MarkerId("destination"),
+                    position: latLngDestination,
+                    // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+                  ));
+
+                  setState(() {
+                    panelController.close();
+                    _createPolylines(source, destination);
+                    getDistanceAndTime(
+                        latLngSource.latitude,
+                        latLngSource.longitude,
+                        latLngDestination.latitude,
+                        latLngDestination.longitude);
+                    Future.delayed(const Duration(milliseconds: 2000), () {
+                      setState(() {
+                        panelController.open();
+                      });
+                    });
+                  });
+                }
+              },
+            ),
+          )
+        : Container();
   }
 }
