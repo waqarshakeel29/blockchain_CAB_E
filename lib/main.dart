@@ -8,9 +8,11 @@ import 'package:cab_e/scanQR_screen.dart';
 import 'package:cab_e/shared/constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import 'package:cab_e/providers/order_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'authServices.dart';
 
@@ -184,16 +186,32 @@ class _MyHomePageState extends State<MyHomePage> {
   // }
 
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    SystemChrome.setPreferredOrientations(
+        [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       // appBar: AppBar(
       //   title: Text(widget.title),
       //   backgroundColor: AppColor.primaryYellow,
       // ),
-      body: Column(
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: ListView(
+        // mainAxisSize: MainAxisSize.max,
+        // crossAxisAlignment: CrossAxisAlignment.stretch,
+        // mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             children: [

@@ -201,7 +201,9 @@ class MapScreenState extends State<MapScreen> {
       controller: panelController,
       maxHeight: _isPathCreated
           ? mediaQuerySize.height * 0.40
-          : true ? 0 : mediaQuerySize.height * 0.30,
+          : true
+              ? 0
+              : mediaQuerySize.height * 0.30,
       minHeight: _isPathCreated ? mediaQuerySize.height * 0.055 : 0,
       body: Stack(
         children: [
