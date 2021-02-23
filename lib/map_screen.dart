@@ -39,11 +39,21 @@ class MapScreenState extends State<MapScreen> {
 
   GoogleMapController mapController;
   final Key _mapKey = UniqueKey();
+  static const CAMERA_POSITION = CameraPosition(
+    target: LatLng(30.3753, 69.3451),
+    bearing: 0,
+    tilt: 30,
+    zoom: 6.0,
+  );
+
+  var _currentPosition = null;
 
   // Pickup - Dropoff - LagLngSource - LatLngDestination
   bool pickUpSelected = false;
   bool dropOffSelected = false;
   bool confirmPressed = false;
+
+  bool isFocusOnSource = true;
 
   String pickUp = "";
   String dropOff = "";
@@ -73,7 +83,7 @@ class MapScreenState extends State<MapScreen> {
         .where('isCatered', isEqualTo: false)
         .get()
         .then((value) async {
-      if (value.size != 0) {
+      if (value.docs.isNotEmpty) {
         orderProvider.currentOrder.value = Order.fromMap(value.docs[0].data());
         setPathRouteInfo(orderProvider.currentOrder.value);
         orderProvider.currentOrder.notifyListeners();
@@ -88,7 +98,7 @@ class MapScreenState extends State<MapScreen> {
         orderProvider.listenOrder(
             orderProvider.currentOrder.value.orderId, messengerCallback);
       } else {
-        // _getCurrentAtStart();
+        _getCurrentAtStart();
       }
     });
   }
@@ -200,11 +210,13 @@ class MapScreenState extends State<MapScreen> {
     SlidingUpPanel s = SlidingUpPanel(
       controller: panelController,
       maxHeight: _isPathCreated
-          ? mediaQuerySize.height * 0.40
+          ? mediaQuerySize.height * 0.30
           : true
               ? 0
               : mediaQuerySize.height * 0.30,
       minHeight: _isPathCreated ? mediaQuerySize.height * 0.055 : 0,
+      color: Colors.transparent,
+      boxShadow: null,
       body: Stack(
         children: [
           GoogleMap(
@@ -224,12 +236,16 @@ class MapScreenState extends State<MapScreen> {
             ),
           ),
           Card(
-            elevation: 10,
+            elevation: 15,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: Colors.white70, width: 1),
+              borderRadius: BorderRadius.circular(15),
+            ),
             margin: EdgeInsets.only(right: 20, left: 20, top: 20),
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Container(
-                height: mediaQuerySize.height * 0.145,
+                height: mediaQuerySize.height * 0.135,
                 width: mediaQuerySize.width,
                 child: Row(
                   children: [
@@ -287,47 +303,50 @@ class MapScreenState extends State<MapScreen> {
                                 16,
                             child: GestureDetector(
                               onTap: () async {
-                                FocusScope.of(context).unfocus();
-                                var result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            CustomSearchScaffold(
-                                                text: pickUp)));
-                                if (result != null) {
-                                  if (result.toString() == SELECT_FROM_MAP) {
-                                    // var res = await Navigator.push(
-                                    //   context,
-                                    //   MaterialPageRoute(
-                                    //     builder: (context) => PlacePicker(
-                                    //       apiKey:
-                                    //           GOOGLE_API_KEY, // Put YOUR OWN KEY here.
-                                    //       initialPosition: _center,
-                                    //       useCurrentLocation: false,
-                                    //     ),
-                                    //   ),
-                                    // );
-                                    // setState(() {
-                                    //   pickUp = res.formattedAddress;
-                                    //   print("RESULT ___ _ _ _ __  _ $pickUp");
-                                    //   latLngSource = LatLng(res.geometry.location.lat,
-                                    //       res.geometry.location.lng);
-                                    //   addMarker(latLngSource, "Source");
-                                    // });
-                                  } else {
-                                    setState(() {
-                                      pickUp = result.name;
-                                      pickUpSelected = true;
-                                      print("RESULT ___ _ _ _ __  _ $pickUp");
-                                      latLngSource = LatLng(
-                                          result.geometry.location.lat,
-                                          result.geometry.location.lng);
-                                      print(
-                                          "LAGLNG ___ _ _ _ __  _ $latLngSource");
-                                      addMarker(latLngSource, "Source");
-                                    });
-                                  }
+                                if (orderProvider.currentOrder.value == null &&
+                                    !_isPathCreated) {
+                                  FocusScope.of(context).unfocus();
+                                  var result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              CustomSearchScaffold(
+                                                  text: pickUp)));
+                                  if (result != null) {
+                                    if (result.toString() == SELECT_FROM_MAP) {
+                                      // var res = await Navigator.push(
+                                      //   context,
+                                      //   MaterialPageRoute(
+                                      //     builder: (context) => PlacePicker(
+                                      //       apiKey:
+                                      //           GOOGLE_API_KEY, // Put YOUR OWN KEY here.
+                                      //       initialPosition: _center,
+                                      //       useCurrentLocation: false,
+                                      //     ),
+                                      //   ),
+                                      // );
+                                      // setState(() {
+                                      //   pickUp = res.formattedAddress;
+                                      //   print("RESULT ___ _ _ _ __  _ $pickUp");
+                                      //   latLngSource = LatLng(res.geometry.location.lat,
+                                      //       res.geometry.location.lng);
+                                      //   addMarker(latLngSource, "Source");
+                                      // });
+                                    } else {
+                                      setState(() {
+                                        pickUp = result.name;
+                                        pickUpSelected = true;
+                                        print("RESULT ___ _ _ _ __  _ $pickUp");
+                                        latLngSource = LatLng(
+                                            result.geometry.location.lat,
+                                            result.geometry.location.lng);
+                                        print(
+                                            "LAGLNG ___ _ _ _ __  _ $latLngSource");
+                                        addMarker(latLngSource, "Source");
+                                      });
+                                    }
 //                              addMarker(latLngSource, "Source");
+                                  }
                                 }
                               },
                               child: Container(
@@ -351,16 +370,43 @@ class MapScreenState extends State<MapScreen> {
                                               ),
                                             )
                                           : Expanded(
-                                              child: Text(
-                                                pickUp,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                    fontSize: 16,
-                                                    color: Colors.black
-                                                        .withOpacity(0.9)),
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 5, top: 5),
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceEvenly,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      "Pickup",
+                                                      style: TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Colors.black),
+                                                    ),
+                                                    Text(
+                                                      pickUp,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          color: _isPathCreated
+                                                              ? Colors.black
+                                                                  .withOpacity(
+                                                                      0.6)
+                                                              : Colors.black
+                                                                  .withOpacity(
+                                                                      0.9)),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                      pickUp != ""
+                                      (pickUp != "" && !_isPathCreated)
                                           ? GestureDetector(
                                               child: Icon(
                                                 Icons.close,
@@ -378,6 +424,18 @@ class MapScreenState extends State<MapScreen> {
                                                                 marker.markerId
                                                                     .value ==
                                                                 "Source"));
+                                                    if (_markers.length != 0) {
+                                                      addMarker(
+                                                          latLngDestination,
+                                                          "destination");
+                                                    } else {
+                                                      if (_currentPosition !=
+                                                          null) {
+                                                        _getSavedCurrentLocation();
+                                                      } else {
+                                                        _getCurrentLocation();
+                                                      }
+                                                    }
                                                   } catch (e) {
                                                     print(e);
                                                   }
@@ -418,48 +476,52 @@ class MapScreenState extends State<MapScreen> {
                                 16,
                             child: GestureDetector(
                               onTap: () async {
-                                FocusScope.of(context).unfocus();
-                                var result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            CustomSearchScaffold(
-                                                text: dropOff)));
-                                if (result != null) {
-                                  if (result.toString() == SELECT_FROM_MAP) {
-                                    // var res = await Navigator.push(
-                                    //   context,
-                                    //   MaterialPageRoute(
-                                    //     builder: (context) => PlacePicker(
-                                    //       apiKey:
-                                    //           GOOGLE_API_KEY, // Put YOUR OWN KEY here.
-                                    //       initialPosition: _center,
-                                    //       useCurrentLocation: false,
-                                    //     ),
-                                    //   ),
-                                    // );
-                                    // setState(() {
-                                    //   pickUp = res.formattedAddress;
-                                    //   print("RESULT ___ _ _ _ __  _ $pickUp");
-                                    //   latLngSource = LatLng(res.geometry.location.lat,
-                                    //       res.geometry.location.lng);
-                                    //   addMarker(latLngSource, "Source");
-                                    // });
-                                  } else {
-                                    setState(() {
-                                      dropOff = result.name;
-                                      dropOffSelected = true;
-                                      print("RESULT ___ _ _ _ __  _ $dropOff");
-                                      latLngDestination = LatLng(
-                                          result.geometry.location.lat,
-                                          result.geometry.location.lng);
-                                      print(
-                                          "LAGLNG ___ _ _ _ __  _ $latLngDestination");
-                                      addMarker(
-                                          latLngDestination, "Destination");
-                                    });
-                                  }
+                                if (orderProvider.currentOrder.value == null &&
+                                    !_isPathCreated) {
+                                  FocusScope.of(context).unfocus();
+                                  var result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              CustomSearchScaffold(
+                                                  text: dropOff)));
+                                  if (result != null) {
+                                    if (result.toString() == SELECT_FROM_MAP) {
+                                      // var res = await Navigator.push(
+                                      //   context,
+                                      //   MaterialPageRoute(
+                                      //     builder: (context) => PlacePicker(
+                                      //       apiKey:
+                                      //           GOOGLE_API_KEY, // Put YOUR OWN KEY here.
+                                      //       initialPosition: _center,
+                                      //       useCurrentLocation: false,
+                                      //     ),
+                                      //   ),
+                                      // );
+                                      // setState(() {
+                                      //   pickUp = res.formattedAddress;
+                                      //   print("RESULT ___ _ _ _ __  _ $pickUp");
+                                      //   latLngSource = LatLng(res.geometry.location.lat,
+                                      //       res.geometry.location.lng);
+                                      //   addMarker(latLngSource, "Source");
+                                      // });
+                                    } else {
+                                      setState(() {
+                                        dropOff = result.name;
+                                        dropOffSelected = true;
+                                        print(
+                                            "RESULT ___ _ _ _ __  _ $dropOff");
+                                        latLngDestination = LatLng(
+                                            result.geometry.location.lat,
+                                            result.geometry.location.lng);
+                                        print(
+                                            "LAGLNG ___ _ _ _ __  _ $latLngDestination");
+                                        addMarker(
+                                            latLngDestination, "destination");
+                                      });
+                                    }
 //                              addMarker(latLngSource, "Source");
+                                  }
                                 }
                               },
                               child: Container(
@@ -485,15 +547,42 @@ class MapScreenState extends State<MapScreen> {
                                               ),
                                             )
                                           : Expanded(
-                                              child: Text(
-                                              dropOff,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: Colors.black
-                                                      .withOpacity(0.9)),
+                                              child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 5, top: 5),
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceEvenly,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    "Drop off",
+                                                    style: TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.black),
+                                                  ),
+                                                  Text(
+                                                    dropOff,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                        fontSize: 16,
+                                                        color: _isPathCreated
+                                                            ? Colors.black
+                                                                .withOpacity(
+                                                                    0.6)
+                                                            : Colors.black
+                                                                .withOpacity(
+                                                                    0.9)),
+                                                  ),
+                                                ],
+                                              ),
                                             )),
-                                      dropOff != ""
+                                      (dropOff != "" && !_isPathCreated)
                                           ? GestureDetector(
                                               child: Icon(
                                                 Icons.close,
@@ -510,7 +599,19 @@ class MapScreenState extends State<MapScreen> {
                                                             (Marker marker) =>
                                                                 marker.markerId
                                                                     .value ==
-                                                                "Destination"));
+                                                                "destination"));
+
+                                                    if (_markers.length != 0) {
+                                                      addMarker(latLngSource,
+                                                          "Source");
+                                                    } else {
+                                                      if (_currentPosition !=
+                                                          null) {
+                                                        _getSavedCurrentLocation();
+                                                      } else {
+                                                        _getCurrentLocation();
+                                                      }
+                                                    }
                                                   } catch (e) {
                                                     print(e);
                                                   }
@@ -532,7 +633,33 @@ class MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-          showConfirmButton()
+          showConfirmButton(),
+          Positioned(
+              bottom: 100,
+              right: 20,
+              child: orderProvider.currentOrder.value == null
+                  ? (!pickUpSelected && !dropOffSelected)
+                      ? Container(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: Container(
+                              width: 50,
+                              height: 50,
+                              child: RawMaterialButton(
+                                shape: CircleBorder(),
+                                fillColor: AppColor.primaryYellow,
+                                elevation: 8.0,
+                                onPressed: _getCurrentLocation,
+                                child: Icon(
+                                  Icons.my_location,
+                                  color: AppColor.primaryDark,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Container()
+                  : Container())
         ],
       ),
       collapsed: GestureDetector(
@@ -545,33 +672,36 @@ class MapScreenState extends State<MapScreen> {
             }
           });
         },
-        child: Container(
-          // color: AppColor.primaryYellow,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 15, right: 15),
-            child: Row(
-              children: [
-                Text(
-                  "Order a Ride",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 25),
-                ),
-                Expanded(child: SizedBox()),
-                Icon(
-                  Icons.arrow_upward,
-                  color: Colors.white,
-                )
-              ],
+        child: Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20),
+          child: Container(
+            // color: AppColor.primaryYellow,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 15, right: 15),
+              child: Row(
+                children: [
+                  Text(
+                    "Order a Ride",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 25),
+                  ),
+                  Expanded(child: SizedBox()),
+                  Icon(
+                    Icons.arrow_upward,
+                    color: Colors.white,
+                  )
+                ],
+              ),
             ),
-          ),
-          decoration: BoxDecoration(
-            color: AppColor.primaryYellow,
-            border: Border.all(color: AppColor.primaryYellow),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20.0),
-              topRight: Radius.circular(20.0),
+            decoration: BoxDecoration(
+              color: AppColor.primaryYellow,
+              border: Border.all(color: AppColor.primaryYellow),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20.0),
+                topRight: Radius.circular(20.0),
+              ),
             ),
           ),
         ),
@@ -726,7 +856,6 @@ class MapScreenState extends State<MapScreen> {
           return orderRide();
         }
       }()),
-      color: AppColor.primaryDark,
       borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30), topRight: Radius.circular(30)),
     );
@@ -938,6 +1067,33 @@ class MapScreenState extends State<MapScreen> {
       draggable: false,
       // This marker id can be anything that uniquely identifies each marker.
       markerId: MarkerId(id),
+      position: latLng,
+      // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+    ));
+    mapController.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+      target: LatLng(latLng.latitude - 0.001, latLng.longitude),
+      zoom: 15,
+    )));
+  }
+
+  void _getSavedCurrentLocation() {
+    try {
+      _markers.remove(_markers
+          .firstWhere((Marker marker) => marker.markerId.value == "current"));
+    } catch (e) {
+      print(e);
+    }
+
+    if (_isPathCreated) {
+      _isPathCreated = false;
+      polylineCoordinates.clear();
+      _markers.clear();
+    }
+    var latLng = LatLng(_currentPosition.latitude, _currentPosition.longitude);
+    _markers.add(Marker(
+      draggable: false,
+      // This marker id can be anything that uniquely identifies each marker.
+      markerId: MarkerId("current"),
       position: latLng,
       // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
     ));
@@ -1184,7 +1340,7 @@ class MapScreenState extends State<MapScreen> {
                         latLngDestination = LatLng(result.geometry.location.lat,
                             result.geometry.location.lng);
                         print("LAGLNG ___ _ _ _ __  _ $latLngDestination");
-                        addMarker(latLngDestination, "Destination");
+                        addMarker(latLngDestination, "destination");
                       });
                     }
 //                              addMarker(latLngSource, "Source");
@@ -1306,267 +1462,359 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Widget confirmRide() {
-    return Container(
-      color: AppColor.primaryYellow,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            Container(
-              width: MediaQuery.of(context).size.width * 0.8,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Card(
+          elevation: 15,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.white70, width: 1),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          margin: EdgeInsets.only(right: 20, left: 20, top: 20, bottom: 20),
+          color: AppColor.primaryDark,
+          child: Container(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            // color: AppColor.primaryYellow,
+            width: MediaQuery.of(context).size.width * 0.9,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(children: <TextSpan>[
+                      TextSpan(
+                          text: totalDistance + "\n",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColor.primaryYellow)),
+                      TextSpan(
+                          text: "KM",
+                          style: TextStyle(
+                              fontSize: 13, color: AppColor.primaryYellow)),
+                    ])),
+                RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(children: <TextSpan>[
+                      TextSpan(
+                          text: totalPrice + "\n",
+                          style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColor.primaryYellow)),
+                      TextSpan(
+                          text: "Rs",
+                          style: TextStyle(
+                              fontSize: 15, color: AppColor.primaryYellow)),
+                    ])),
+                RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(children: <TextSpan>[
+                      TextSpan(
+                          text: totalTime + "\n",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColor.primaryYellow)),
+                      TextSpan(
+                          text: totalTimeMin ? "Min" : "Hrs",
+                          style: TextStyle(
+                              fontSize: 15, color: AppColor.primaryYellow)),
+                    ])),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: Card(
+            elevation: 15,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: Colors.white70, width: 1),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            color: AppColor.primaryDark,
+            child: Container(
+              // padding: const EdgeInsets.only(top: 8, bottom: 8),
+              // color: AppColor.primaryYellow,
+              width: MediaQuery.of(context).size.width * 0.9,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Container(
-                    alignment: Alignment.center,
-                    width: 70,
-                    height: 70,
-                    child: RichText(
-                        textAlign: TextAlign.center,
-                        text: TextSpan(children: <TextSpan>[
-                          TextSpan(
-                              text: totalDistance + "\n",
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColor.primaryYellow)),
-                          TextSpan(
-                              text: "KM",
-                              style: TextStyle(
-                                  fontSize: 13, color: AppColor.primaryYellow)),
-                        ])),
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle, color: Colors.white),
+                  Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: PhysicalModel(
+                          color: Colors.black.withOpacity(0.0),
+                          elevation: 10,
+                          shadowColor: Colors.grey,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            color: Colors.red,
+                            height: 60,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        child: PhysicalModel(
+                          color: Colors.black.withOpacity(0.0),
+                          elevation: 10,
+                          shadowColor: Colors.grey,
+                          child: Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  border: Border.all(
+                                    color: Colors.blue,
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(20))),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 8, right: 8),
+                                child: Text(
+                                  "Bike",
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                              )),
+                        ),
+                      )
+                    ],
                   ),
-                  Container(
-                    alignment: Alignment.center,
-                    width: MediaQuery.of(context).size.width * 0.2,
-                    height: 100,
-                    child: RichText(
-                        textAlign: TextAlign.center,
-                        text: TextSpan(children: <TextSpan>[
-                          TextSpan(
-                              text: totalPrice + "\n",
-                              style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColor.primaryYellow)),
-                          TextSpan(
-                              text: "Rs",
-                              style: TextStyle(
-                                  fontSize: 15, color: AppColor.primaryYellow)),
-                        ])),
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle, color: Colors.white),
+                  Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: PhysicalModel(
+                          color: Colors.black.withOpacity(0.0),
+                          elevation: 10,
+                          shadowColor: Colors.grey,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            color: Colors.red,
+                            height: 60,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        child: PhysicalModel(
+                          color: Colors.black.withOpacity(0.0),
+                          elevation: 10,
+                          shadowColor: Colors.grey,
+                          child: Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  border: Border.all(
+                                    color: Colors.blue,
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(20))),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 8, right: 8),
+                                child: Text(
+                                  "Bike",
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                              )),
+                        ),
+                      )
+                    ],
                   ),
-                  Container(
-                    alignment: Alignment.center,
-                    width: 70,
-                    height: 70,
-                    child: RichText(
-                        textAlign: TextAlign.center,
-                        text: TextSpan(children: <TextSpan>[
-                          TextSpan(
-                              text: totalTime + "\n",
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColor.primaryYellow)),
-                          TextSpan(
-                              text: totalTimeMin ? "Min" : "Hrs",
-                              style: TextStyle(
-                                  fontSize: 15, color: AppColor.primaryYellow)),
-                        ])),
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle, color: Colors.white),
+                  Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: PhysicalModel(
+                          color: Colors.black.withOpacity(0.0),
+                          elevation: 10,
+                          shadowColor: Colors.grey,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            color: Colors.red,
+                            height: 60,
+                            width: 50,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        child: PhysicalModel(
+                          color: Colors.black.withOpacity(0.0),
+                          elevation: 10,
+                          shadowColor: Colors.grey,
+                          child: Container(
+                              decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  border: Border.all(
+                                    color: Colors.blue,
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(20))),
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 8, right: 8),
+                                child: Text(
+                                  "Bike",
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                              )),
+                        ),
+                      )
+                    ],
                   ),
                 ],
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.home,
-                  color: AppColor.primaryYellow,
-                ),
-                SizedBox(
-                  width: 5,
-                ),
-                Container(
-                  // decoration: _boxDecoration,
-                  width: MediaQuery.of(context).size.width * 0.6,
-                  height: 30,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 5),
-                    child: Row(
-                      children: <Widget>[
-                        Flexible(
-                            child: Text(
-                          pickUp,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 15,
-                              color: AppColor.primaryYellow.withOpacity(0.9)),
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(
-              height: 10,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.home,
-                  color: AppColor.primaryYellow,
-                ),
-                SizedBox(
-                  width: 5,
-                ),
-                Container(
-                  // decoration: _boxDecoration,
-                  width: MediaQuery.of(context).size.width * 0.6,
-                  height: 30,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 5),
-                    child: Row(
-                      children: <Widget>[
-                        Flexible(
-                            child: Text(
-                          dropOff,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 15,
-                              color: AppColor.primaryYellow.withOpacity(0.9)),
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Divider(color: Colors.white),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                RaisedButton(
-                  color: Colors.white,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Text(
-                      "CANCEL",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColor.primaryYellow,
-                          fontSize: 18),
-                    ),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                    side: BorderSide(color: AppColor.primaryYellow),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      confirmPressed = false;
-                      _isPathCreated = false;
-                      totalTime = "";
-                      totalDistance = "";
-                      totalPrice = "";
-                      polylineCoordinates.clear();
-                      addMarker(latLngSource, "Source");
-                      panelController.close();
-                    });
-                  },
-                ),
-                RaisedButton(
-                    color: AppColor.primaryYellow,
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Text(
-                        "CONFIRM",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColor.primaryDark,
-                            fontSize: 18),
-                      ),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                      side: BorderSide(color: AppColor.primaryYellow),
-                    ),
-                    onPressed: () async {
-                      // showDialog(
-                      //   context: context,
-                      //   builder: (BuildContext context) => CustomDialog(
-                      //     title: "Success",
-                      //     description:
-                      //         "Ride has been finished! ",
-                      //     buttonText: "Okay",
-                      //   ),
-                      // );
-
-                      int orderNo = 1;
-                      // if (myOrder.docs.length != 0) {
-                      //   orderNo =
-                      //       Order.fromMap(myOrder.docs[0].data()).userOrderNo + 1;
-                      // }
-
-                      Order order = Order();
-                      order.userOrderNo = orderNo;
-                      order.isCatered = false;
-                      order.orderId = Uuid().generateV4();
-                      order.sourceLat = latLngSource.latitude;
-                      order.sourceLng = latLngSource.longitude;
-                      order.destLat = latLngDestination.latitude;
-                      order.destlng = latLngDestination.longitude;
-                      order.destLocationName = dropOff;
-                      order.sourceLocationName = pickUp;
-                      order.instruction = instructionText;
-                      order.creationTime =
-                          DateTime.now().millisecondsSinceEpoch;
-                      // order.scheduledTime = selectedDate.millisecondsSinceEpoch;
-                      order.userUid = "1";
-                      order.fare = double.parse(totalPrice);
-
-                      order.status = OrderStatus.findingDriver;
-
-                      bool isUploaded =
-                          await orderProvider.uploadOrderNow(order);
-
-                      if (isUploaded) {
-                        // orderProvider.sendNotification(
-                        //     'notifier', order.orderId);
-
-                        // Navigator.push(
-                        //     context,
-                        //     MaterialPageRoute(
-                        //         builder: (context) => PaymentScreen(
-                        //               fare: totalPrice,
-                        //             )));
-
-                        orderProvider.listenOrder(
-                            orderProvider.currentOrder.value.orderId,
-                            messengerCallback);
-                        findMessenger(120);
-                      }
-                    }),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.only(left: 25, right: 20),
+          child: Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 15),
+                  child: PhysicalModel(
+                    color: Colors.black.withOpacity(0.0),
+                    elevation: 5,
+                    shadowColor: Colors.grey,
+                    borderRadius: BorderRadius.circular(20),
+                    child: MaterialButton(
+                      // minWidth: mediaQuerySize.width - 40,
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(13.0),
+                        child: Text(
+                          "CANCEL",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColor.primaryYellow,
+                              fontSize: 18),
+                        ),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: AppColor.primaryYellow),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          confirmPressed = false;
+                          _isPathCreated = false;
+                          totalTime = "";
+                          totalDistance = "";
+                          totalPrice = "";
+                          polylineCoordinates.clear();
+                          addMarker(latLngSource, "Source");
+                          panelController.close();
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 20,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 15),
+                  child: PhysicalModel(
+                    color: Colors.black.withOpacity(0.0),
+                    elevation: 5,
+                    shadowColor: Colors.grey,
+                    borderRadius: BorderRadius.circular(20),
+                    child: MaterialButton(
+                      // minWidth: mediaQuerySize.width - 40,
+                      color: AppColor.primaryYellow,
+                      child: Padding(
+                        padding: const EdgeInsets.all(13.0),
+                        child: Text(
+                          "CONFIRM",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColor.primaryDark,
+                              fontSize: 18),
+                        ),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: AppColor.primaryYellow),
+                      ),
+                      onPressed: () async {
+                        // showDialog(
+                        //   context: context,
+                        //   builder: (BuildContext context) => CustomDialog(
+                        //     title: "Success",
+                        //     description:
+                        //         "Ride has been finished! ",
+                        //     buttonText: "Okay",
+                        //   ),
+                        // );
+
+                        int orderNo = 1;
+                        // if (myOrder.docs.length != 0) {
+                        //   orderNo =
+                        //       Order.fromMap(myOrder.docs[0].data()).userOrderNo + 1;
+                        // }
+
+                        Order order = Order();
+                        order.userOrderNo = orderNo;
+                        order.isCatered = false;
+                        order.orderId = Uuid().generateV4();
+                        order.sourceLat = latLngSource.latitude;
+                        order.sourceLng = latLngSource.longitude;
+                        order.destLat = latLngDestination.latitude;
+                        order.destlng = latLngDestination.longitude;
+                        order.destLocationName = dropOff;
+                        order.sourceLocationName = pickUp;
+                        order.instruction = instructionText;
+                        order.creationTime =
+                            DateTime.now().millisecondsSinceEpoch;
+                        // order.scheduledTime = selectedDate.millisecondsSinceEpoch;
+                        order.userUid = "1";
+                        order.fare = double.parse(totalPrice);
+
+                        order.status = OrderStatus.findingDriver;
+
+                        bool isUploaded =
+                            await orderProvider.uploadOrderNow(order);
+
+                        if (isUploaded) {
+                          // orderProvider.sendNotification(
+                          //     'notifier', order.orderId);
+
+                          // Navigator.push(
+                          //     context,
+                          //     MaterialPageRoute(
+                          //         builder: (context) => PaymentScreen(
+                          //               fare: totalPrice,
+                          //             )));
+
+                          orderProvider.listenOrder(
+                              orderProvider.currentOrder.value.orderId,
+                              messengerCallback);
+                          findMessenger(120);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )
+      ],
     );
   }
 
   Widget onTheWayRide() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
+    return Container(
+      color: Colors.white,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -1881,12 +2129,44 @@ class MapScreenState extends State<MapScreen> {
     });
   }
 
+  _getCurrentAtStart() {
+    _gpsService("Enable GPS",
+        'This app will require GPS services, please enable it first');
+    final Geolocator geolocator = Geolocator()..forceAndroidLocationManager;
+    geolocator
+        .getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
+        .then((Position position) {
+      setState(() {
+        _currentPosition = position;
+        addMarker(LatLng(position.latitude, position.longitude), "current");
+      });
+    }).catchError((e) {
+      print(e);
+    });
+  }
+
   _getCurrentLocation() async {
     if (_isPathCreated) {
       _isPathCreated = false;
       polylineCoordinates.clear();
       _markers.clear();
     }
+
+    // requestLocationPermission();
+    _gpsService("Can't Get Current Location",
+        'Please make sure you enable GPS and try again');
+
+    final Geolocator geolocator = Geolocator()..forceAndroidLocationManager;
+    geolocator
+        .getCurrentPosition(desiredAccuracy: LocationAccuracy.best)
+        .then((Position position) {
+      setState(() {
+        _currentPosition = position;
+        addMarker(LatLng(position.latitude, position.longitude), "current");
+      });
+    }).catchError((e) {
+      print(e);
+    });
   }
 
   showConfirmButton() {
@@ -1896,91 +2176,97 @@ class MapScreenState extends State<MapScreen> {
         ? Positioned(
             bottom: 100,
             left: 20,
-            child: MaterialButton(
-              minWidth: mediaQuerySize.width - 40,
-              color: AppColor.primaryYellow,
-              child: Padding(
-                padding: const EdgeInsets.all(13.0),
-                child: Text(
-                  "CONFIRM",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColor.primaryDark,
-                      fontSize: 18),
+            child: PhysicalModel(
+              color: Colors.black.withOpacity(0.0),
+              elevation: 5,
+              shadowColor: Colors.grey,
+              borderRadius: BorderRadius.circular(20),
+              child: MaterialButton(
+                minWidth: mediaQuerySize.width - 40,
+                color: AppColor.primaryYellow,
+                child: Padding(
+                  padding: const EdgeInsets.all(13.0),
+                  child: Text(
+                    "CONFIRM",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColor.primaryDark,
+                        fontSize: 18),
+                  ),
                 ),
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4.0),
-                side: BorderSide(color: AppColor.primaryYellow),
-              ),
-              onPressed: () {
-                setState(() {
-                  confirmPressed = true;
-                });
-
-                int count = 2;
-                // if (latLngSource == null) {
-                //   count = count - 1;
-                //   Fluttertoast.showToast(
-                //       msg: "Source is not Selected!",
-                //       backgroundColor: Colors.white,
-                //       textColor: Colors.black,
-                //       toastLength: Toast.LENGTH_LONG);
-                // }
-                // if (latLngDestination == null) {
-                //   count = count - 1;
-                //   Fluttertoast.showToast(
-                //       msg: "Destination is not Selected!",
-                //       backgroundColor: Colors.white,
-                //       textColor: Colors.black,
-                //       toastLength: Toast.LENGTH_LONG);
-                //
-                // }
-                if (count == 2) {
-                  var source = Position(
-                      latitude: latLngSource.latitude,
-                      longitude: latLngSource.longitude);
-                  var destination = Position(
-                      latitude: latLngDestination.latitude,
-                      longitude: latLngDestination.longitude);
-
-                  ////
-                  FocusScope.of(context).unfocus();
-
-                  _markers.clear();
-
-                  //// Adding Source and Destination marker
-                  _markers.add(Marker(
-                    draggable: false,
-                    // This marker id can be anything that uniquely identifies each marker.
-                    markerId: MarkerId("start"),
-                    position: latLngSource,
-                    // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
-                  ));
-                  _markers.add(Marker(
-                    draggable: false,
-                    // This marker id can be anything that uniquely identifies each marker.
-                    markerId: MarkerId("destination"),
-                    position: latLngDestination,
-                    // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
-                  ));
-
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: AppColor.primaryYellow),
+                ),
+                onPressed: () {
                   setState(() {
-                    panelController.close();
-                    _createPolylines(source, destination);
-                    getDistanceAndTime(
-                        latLngSource.latitude,
-                        latLngSource.longitude,
-                        latLngDestination.latitude,
-                        latLngDestination.longitude);
-                    Future.delayed(const Duration(milliseconds: 2000), () {
-                      setState(() {
-                        panelController.open();
+                    confirmPressed = true;
+                  });
+
+                  int count = 2;
+                  // if (latLngSource == null) {
+                  //   count = count - 1;
+                  //   Fluttertoast.showToast(
+                  //       msg: "Source is not Selected!",
+                  //       backgroundColor: Colors.white,
+                  //       textColor: Colors.black,
+                  //       toastLength: Toast.LENGTH_LONG);
+                  // }
+                  // if (latLngDestination == null) {
+                  //   count = count - 1;
+                  //   Fluttertoast.showToast(
+                  //       msg: "Destination is not Selected!",
+                  //       backgroundColor: Colors.white,
+                  //       textColor: Colors.black,
+                  //       toastLength: Toast.LENGTH_LONG);
+                  //
+                  // }
+                  if (count == 2) {
+                    var source = Position(
+                        latitude: latLngSource.latitude,
+                        longitude: latLngSource.longitude);
+                    var destination = Position(
+                        latitude: latLngDestination.latitude,
+                        longitude: latLngDestination.longitude);
+
+                    ////
+                    FocusScope.of(context).unfocus();
+
+                    _markers.clear();
+
+                    //// Adding Source and Destination marker
+                    _markers.add(Marker(
+                      draggable: false,
+                      // This marker id can be anything that uniquely identifies each marker.
+                      markerId: MarkerId("start"),
+                      position: latLngSource,
+                      // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+                    ));
+                    _markers.add(Marker(
+                      draggable: false,
+                      // This marker id can be anything that uniquely identifies each marker.
+                      markerId: MarkerId("destination"),
+                      position: latLngDestination,
+                      // icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+                    ));
+
+                    setState(() {
+                      panelController.close();
+                      _createPolylines(source, destination);
+                      getDistanceAndTime(
+                          latLngSource.latitude,
+                          latLngSource.longitude,
+                          latLngDestination.latitude,
+                          latLngDestination.longitude);
+                      Future.delayed(const Duration(milliseconds: 2000), () {
+                        setState(() {
+                          panelController.open();
+                        });
                       });
                     });
-                  });
-                }
-              },
+                  }
+                },
+              ),
             ),
           )
         : Container();
